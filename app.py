@@ -107,10 +107,12 @@ df = load_data()
 # ---------------------------------------------------------
 
 st.title("🛡️ 판다 길드전 공격 추천")
+st.caption("made by 콩쌍") # 제작자 표시 추가
 st.markdown("데이터를 기반으로 최적의 공격 덱을 추천합니다.")
 
 if df is None:
     st.error("데이터 파일('길드전 답지.xlsx' 등)을 찾을 수 없습니다.")
+    st.info("GitHub 저장소에 엑셀 파일을 함께 업로드했는지 확인해주세요.")
     st.stop()
 
 # --- 사이드바: 필터 ---
@@ -163,12 +165,16 @@ else:
         atk_counts = group_data['공격팀_정렬'].value_counts()
         best_atk_team = atk_counts.idxmax()
         
-        # 2. 그 공격팀 내 최다 펫
+        # 해당 공격팀을 사용한 데이터만 필터링 (펫/스순 추천 정확도를 위해)
         best_atk_data = group_data[group_data['공격팀_정렬'] == best_atk_team]
-        best_pet = best_atk_data['공격팀 펫'].mode()[0]
         
-        # 3. 그 공격팀 내 최다 스순
+        # 2. 그 공격팀 내 최다 펫 + 사용 횟수
+        best_pet = best_atk_data['공격팀 펫'].mode()[0]
+        best_pet_count = best_atk_data[best_atk_data['공격팀 펫'] == best_pet].shape[0]
+        
+        # 3. 그 공격팀 내 최다 스순 + 사용 횟수
         best_skill = best_atk_data['공격팀 스순'].mode()[0]
+        best_skill_count = best_atk_data[best_atk_data['공격팀 스순'] == best_skill].shape[0]
         
         # --- UI 표시 ---
         # 컨테이너를 카드처럼 사용
@@ -178,7 +184,8 @@ else:
             with col1:
                 st.subheader(f"VS {defense_team}")
             with col2:
-                st.markdown(f"<div style='text-align:right; background:#e0e7ff; color:#3730a3; padding:5px; border-radius:5px; font-weight:bold;'>{match_count}승 검증</div>", unsafe_allow_html=True)
+                # 수정: '승 검증' -> '개의 데이터'
+                st.markdown(f"<div style='text-align:right; background:#e0e7ff; color:#3730a3; padding:5px; border-radius:5px; font-weight:bold;'>{match_count}개의 데이터</div>", unsafe_allow_html=True)
             
             # 요약 정보 (공격팀, 펫, 스순)
             s_col1, s_col2, s_col3 = st.columns(3)
@@ -186,10 +193,12 @@ else:
                 st.markdown("**⚔️ 추천 공격팀**")
                 st.markdown(f":blue[{best_atk_team}]")
             with s_col2:
-                st.markdown("**🐶 추천 펫**")
+                # 수정: 펫 사용 횟수 추가
+                st.markdown(f"**🐶 추천 펫** <span style='color:gray; font-size:0.8em'>({best_pet_count}회)</span>", unsafe_allow_html=True)
                 st.text(best_pet)
             with s_col3:
-                st.markdown("**⚡ 추천 스순**")
+                # 수정: 스순 사용 횟수 추가
+                st.markdown(f"**⚡ 추천 스순** <span style='color:gray; font-size:0.8em'>({best_skill_count}회)</span>", unsafe_allow_html=True)
                 st.markdown(f"{best_skill} <span style='background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.8em;'>Best</span>", unsafe_allow_html=True)
 
             # 상세 정보 (Expander - 접기/펴기)
