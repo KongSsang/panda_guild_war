@@ -201,22 +201,33 @@ else:
                 st.markdown(f"**⚡ 추천 스순** <span style='color:gray; font-size:0.8em'>({best_skill_count}회)</span>", unsafe_allow_html=True)
                 st.markdown(f"{best_skill} <span style='background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.8em;'>Best</span>", unsafe_allow_html=True)
 
-            # 상세 정보 (Expander - 접기/펴기)
-            with st.expander("🔻 상세 기록 보기"):
-                # 상세 데이터 집계
-                # (공격팀, 공격펫, 공격스순, 방어펫, 방어스순) 별 빈도
-                detail_counts = group_data.groupby(['공격팀_정렬', '공격팀 펫', '공격팀 스순', '방어팀 펫', '방어팀 스순']).size().reset_index(name='빈도')
-                detail_counts = detail_counts.sort_values('빈도', ascending=False)
-                
-                # 테이블 표시를 위해 컬럼명 변경 및 정리
-                detail_counts.columns = ['공격팀', '공격 펫', '공격 스순', '상대 펫', '상대 스순', '빈도']
-                
-                # 데이터프레임 표시 (인덱스 숨김)
-                st.dataframe(
-                    detail_counts, 
-                    use_container_width=True, 
-                    hide_index=True,
-                    column_config={
-                        "빈도": st.column_config.NumberColumn(format="%d회")
-                    }
-                )
+            # 상세 정보 섹션 구분선
+            st.divider()
+            st.caption("🔻 공격팀별 상세 기록 (클릭하여 펼치기)")
+
+            # --- 상세 기록 (공격팀별로 Grouping하여 Expander 생성) ---
+            # 공격팀별 데이터 그룹화
+            atk_groups = [ (k, v) for k, v in group_data.groupby('공격팀_정렬') ]
+            # 사용 횟수 많은 순으로 정렬
+            atk_groups.sort(key=lambda x: len(x[1]), reverse=True)
+
+            for atk_team, atk_df in atk_groups:
+                count = len(atk_df)
+                # 각 공격팀마다 Expander 생성
+                with st.expander(f"⚔️ {atk_team} ({count}회)"):
+                    # 세부 데이터 집계 (펫, 스순, 상대정보)
+                    detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '방어팀 펫', '방어팀 스순']).size().reset_index(name='빈도')
+                    detail_counts = detail_counts.sort_values('빈도', ascending=False)
+                    
+                    # 컬럼명 변경
+                    detail_counts.columns = ['공격 펫', '공격 스순', '상대 펫', '상대 스순', '빈도']
+                    
+                    # 데이터프레임 표시
+                    st.dataframe(
+                        detail_counts, 
+                        use_container_width=True, 
+                        hide_index=True,
+                        column_config={
+                            "빈도": st.column_config.NumberColumn(format="%d회")
+                        }
+                    )
