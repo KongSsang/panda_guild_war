@@ -18,7 +18,7 @@ st.markdown("""
     <style>
     /* 전체 폰트 및 배경 설정 */
     .block-container {
-        padding-top: 1rem;
+        padding-top: 3rem; /* 제목 잘림 방지 */
         padding-bottom: 5rem;
     }
     
@@ -70,10 +70,10 @@ st.markdown("""
         font-size: 1rem;
         color: #111827;
         font-weight: 500;
-        word-break: keep-all; /* 단어 단위 줄바꿈 */
+        word-break: keep-all;
     }
     .value-highlight {
-        color: #2563eb; /* 파란색 강조 */
+        color: #2563eb;
         font-weight: 700;
     }
     
@@ -142,11 +142,16 @@ def load_data():
     df['방어팀_정렬'] = df['방어팀'].apply(normalize_team)
     df['공격팀_정렬'] = df['공격팀'].apply(normalize_team)
     
+    # 텍스트 컬럼 전처리
     for col in ['방어팀 스순', '방어팀 펫', '공격팀 펫', '공격팀 스순', '속공']:
         if col in df.columns:
             df[col] = df[col].fillna('').astype(str).str.strip()
         else:
             df[col] = ''
+            
+    # [수정] 속공 표기 통일 (선 -> 선공, 후 -> 후공)
+    if '속공' in df.columns:
+        df['속공'] = df['속공'].replace({'선': '선공', '후': '후공'})
 
     if '날짜' in df.columns:
         df['날짜'] = df['날짜'].fillna('').astype(str).str.strip()
