@@ -127,15 +127,22 @@ with st.sidebar:
     search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공 (순서 상관없음)")
 
 # --- 데이터 필터링 로직 (수정됨) ---
-# 1. 방어팀 이름 검색 (순서 무관 로직 적용)
+# 1. 방어팀 이름 검색 (순서 무관, 정확한 이름 일치 로직 적용)
 if search_query:
     # 쉼표(,)를 공백으로 바꾸고, 공백 기준으로 단어를 쪼갭니다.
     # 예: "카일, 카구라" -> ['카일', '카구라']
     keywords = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
     
     if keywords:
-        # 모든 키워드가 방어팀 이름에 포함되어 있는지 확인 (AND 조건)
-        mask = df['방어팀_정렬'].apply(lambda x: all(keyword in x for keyword in keywords))
+        # 각 키워드가 방어팀 캐릭터 리스트에 '정확히' 포함되어 있는지 확인 (AND 조건)
+        # 예: '파이' 검색 시 '스파이크'가 검색되지 않도록 함
+        def check_exact_match(team_str, search_keywords):
+            # "스파이크, 아멜리아, 트루드" -> ["스파이크", "아멜리아", "트루드"]
+            team_members = [member.strip() for member in team_str.split(',')]
+            # 입력한 모든 키워드가 팀 멤버 리스트에 각각 정확히 존재하는지 확인
+            return all(keyword in team_members for keyword in search_keywords)
+
+        mask = df['방어팀_정렬'].apply(lambda x: check_exact_match(x, keywords))
         filtered_df = df[mask]
     else:
         filtered_df = df
