@@ -107,7 +107,7 @@ df = load_data()
 # ---------------------------------------------------------
 
 st.title("🛡️ 판다 길드전 공격 추천")
-st.caption("made by 콩쌍") # 제작자 표시 추가
+st.caption("made by 콩쌍") # 제작자 표시
 st.markdown("데이터를 기반으로 최적의 공격 덱을 추천합니다.")
 
 if df is None:
@@ -124,12 +124,21 @@ with st.sidebar:
     selected_date = st.selectbox("📅 날짜 선택", ["전체 보기"] + unique_dates)
     
     # 2. 검색창
-    search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공...")
+    search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공 (순서 상관없음)")
 
-# --- 데이터 필터링 로직 ---
-# 1. 방어팀 이름 검색
+# --- 데이터 필터링 로직 (수정됨) ---
+# 1. 방어팀 이름 검색 (순서 무관 로직 적용)
 if search_query:
-    filtered_df = df[df['방어팀_정렬'].str.contains(search_query)]
+    # 쉼표(,)를 공백으로 바꾸고, 공백 기준으로 단어를 쪼갭니다.
+    # 예: "카일, 카구라" -> ['카일', '카구라']
+    keywords = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
+    
+    if keywords:
+        # 모든 키워드가 방어팀 이름에 포함되어 있는지 확인 (AND 조건)
+        mask = df['방어팀_정렬'].apply(lambda x: all(keyword in x for keyword in keywords))
+        filtered_df = df[mask]
+    else:
+        filtered_df = df
 else:
     filtered_df = df
 
@@ -165,7 +174,7 @@ else:
         atk_counts = group_data['공격팀_정렬'].value_counts()
         best_atk_team = atk_counts.idxmax()
         
-        # 해당 공격팀을 사용한 데이터만 필터링 (펫/스순 추천 정확도를 위해)
+        # 해당 공격팀을 사용한 데이터만 필터링
         best_atk_data = group_data[group_data['공격팀_정렬'] == best_atk_team]
         
         # 2. 그 공격팀 내 최다 펫 + 사용 횟수
@@ -177,14 +186,13 @@ else:
         best_skill_count = best_atk_data[best_atk_data['공격팀 스순'] == best_skill].shape[0]
         
         # --- UI 표시 ---
-        # 컨테이너를 카드처럼 사용
         with st.container(border=True):
-            # 헤더: 방어팀 이름 + 승리 횟수
+            # 헤더: 방어팀 이름 + 데이터 개수
             col1, col2 = st.columns([4, 1])
             with col1:
                 st.subheader(f"VS {defense_team}")
             with col2:
-                # 수정: '승 검증' -> '개의 데이터'
+                # 'X개의 데이터'로 수정
                 st.markdown(f"<div style='text-align:right; background:#e0e7ff; color:#3730a3; padding:5px; border-radius:5px; font-weight:bold;'>{match_count}개의 데이터</div>", unsafe_allow_html=True)
             
             # 요약 정보 (공격팀, 펫, 스순)
@@ -193,36 +201,31 @@ else:
                 st.markdown("**⚔️ 추천 공격팀**")
                 st.markdown(f":blue[{best_atk_team}]")
             with s_col2:
-                # 수정: 펫 사용 횟수 추가
+                # 펫 사용 횟수 표시
                 st.markdown(f"**🐶 추천 펫** <span style='color:gray; font-size:0.8em'>({best_pet_count}회)</span>", unsafe_allow_html=True)
                 st.text(best_pet)
             with s_col3:
-                # 수정: 스순 사용 횟수 추가
+                # 스순 사용 횟수 표시
                 st.markdown(f"**⚡ 추천 스순** <span style='color:gray; font-size:0.8em'>({best_skill_count}회)</span>", unsafe_allow_html=True)
                 st.markdown(f"{best_skill} <span style='background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.8em;'>Best</span>", unsafe_allow_html=True)
 
-            # 상세 정보 섹션 구분선
+            # 상세 정보 섹션
             st.divider()
             st.caption("🔻 공격팀별 상세 기록 (클릭하여 펼치기)")
 
-            # --- 상세 기록 (공격팀별로 Grouping하여 Expander 생성) ---
-            # 공격팀별 데이터 그룹화
+            # --- 상세 기록 (공격팀별로 Grouping) ---
             atk_groups = [ (k, v) for k, v in group_data.groupby('공격팀_정렬') ]
-            # 사용 횟수 많은 순으로 정렬
             atk_groups.sort(key=lambda x: len(x[1]), reverse=True)
 
             for atk_team, atk_df in atk_groups:
                 count = len(atk_df)
                 # 각 공격팀마다 Expander 생성
                 with st.expander(f"⚔️ {atk_team} ({count}회)"):
-                    # 세부 데이터 집계 (펫, 스순, 상대정보)
                     detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '방어팀 펫', '방어팀 스순']).size().reset_index(name='빈도')
                     detail_counts = detail_counts.sort_values('빈도', ascending=False)
                     
-                    # 컬럼명 변경
                     detail_counts.columns = ['공격 펫', '공격 스순', '상대 펫', '상대 스순', '빈도']
                     
-                    # 데이터프레임 표시
                     st.dataframe(
                         detail_counts, 
                         use_container_width=True, 
