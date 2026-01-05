@@ -88,8 +88,13 @@ def load_data():
     df['방어팀_정렬'] = df['방어팀'].apply(normalize_team)
     df['공격팀_정렬'] = df['공격팀'].apply(normalize_team)
     
-    for col in ['방어팀 스순', '방어팀 펫', '공격팀 펫', '공격팀 스순']:
-        df[col] = df[col].fillna('').astype(str).str.strip()
+    # 텍스트 컬럼 전처리 ('속공' 추가)
+    text_cols = ['방어팀 스순', '방어팀 펫', '공격팀 펫', '공격팀 스순', '속공']
+    for col in text_cols:
+        if col in df.columns:
+            df[col] = df[col].fillna('').astype(str).str.strip()
+        else:
+            df[col] = '' # 컬럼이 없을 경우 빈 문자열로 처리
 
     # 날짜 처리
     if '날짜' in df.columns:
@@ -126,20 +131,14 @@ with st.sidebar:
     # 2. 검색창
     search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공 (순서 상관없음)")
 
-# --- 데이터 필터링 로직 (수정됨) ---
+# --- 데이터 필터링 로직 ---
 # 1. 방어팀 이름 검색 (순서 무관, 정확한 이름 일치 로직 적용)
 if search_query:
-    # 쉼표(,)를 공백으로 바꾸고, 공백 기준으로 단어를 쪼갭니다.
-    # 예: "카일, 카구라" -> ['카일', '카구라']
     keywords = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
     
     if keywords:
-        # 각 키워드가 방어팀 캐릭터 리스트에 '정확히' 포함되어 있는지 확인 (AND 조건)
-        # 예: '파이' 검색 시 '스파이크'가 검색되지 않도록 함
         def check_exact_match(team_str, search_keywords):
-            # "스파이크, 아멜리아, 트루드" -> ["스파이크", "아멜리아", "트루드"]
             team_members = [member.strip() for member in team_str.split(',')]
-            # 입력한 모든 키워드가 팀 멤버 리스트에 각각 정확히 존재하는지 확인
             return all(keyword in team_members for keyword in search_keywords)
 
         mask = df['방어팀_정렬'].apply(lambda x: check_exact_match(x, keywords))
@@ -185,12 +184,34 @@ else:
         best_atk_data = group_data[group_data['공격팀_정렬'] == best_atk_team]
         
         # 2. 그 공격팀 내 최다 펫 + 사용 횟수
-        best_pet = best_atk_data['공격팀 펫'].mode()[0]
-        best_pet_count = best_atk_data[best_atk_data['공격팀 펫'] == best_pet].shape[0]
+        if not best_atk_data['공격팀 펫'].empty:
+            best_pet = best_atk_data['공격팀 펫'].mode()[0]
+            best_pet_count = best_atk_data[best_atk_data['공격팀 펫'] == best_pet].shape[0]
+        else:
+            best_pet = "-"
+            best_pet_count = 0
         
         # 3. 그 공격팀 내 최다 스순 + 사용 횟수
-        best_skill = best_atk_data['공격팀 스순'].mode()[0]
-        best_skill_count = best_atk_data[best_atk_data['공격팀 스순'] == best_skill].shape[0]
+        if not best_atk_data['공격팀 스순'].empty:
+            best_skill = best_atk_data['공격팀 스순'].mode()[0]
+            best_skill_count = best_atk_data[best_atk_data['공격팀 스순'] == best_skill].shape[0]
+        else:
+            best_skill = "-"
+            best_skill_count = 0
+
+        # 4. 그 공격팀 내 최다 속공(선/후) + 사용 횟수
+        if '속공' in best_atk_data.columns and not best_atk_data['속공'].empty:
+            # 빈 값이 아닐 때만 계산
+            valid_speed = best_atk_data[best_atk_data['속공'] != '']
+            if not valid_speed.empty:
+                best_speed = valid_speed['속공'].mode()[0]
+                best_speed_count = valid_speed[valid_speed['속공'] == best_speed].shape[0]
+            else:
+                best_speed = "-"
+                best_speed_count = 0
+        else:
+            best_speed = "-"
+            best_speed_count = 0
         
         # --- UI 표시 ---
         with st.container(border=True):
@@ -199,22 +220,23 @@ else:
             with col1:
                 st.subheader(f"VS {defense_team}")
             with col2:
-                # 'X개의 데이터'로 수정
                 st.markdown(f"<div style='text-align:right; background:#e0e7ff; color:#3730a3; padding:5px; border-radius:5px; font-weight:bold;'>{match_count}개의 데이터</div>", unsafe_allow_html=True)
             
-            # 요약 정보 (공격팀, 펫, 스순)
-            s_col1, s_col2, s_col3 = st.columns(3)
+            # 요약 정보 (공격팀, 펫, 스순, 속공) - 4칸으로 변경
+            s_col1, s_col2, s_col3, s_col4 = st.columns(4)
             with s_col1:
                 st.markdown("**⚔️ 추천 공격팀**")
                 st.markdown(f":blue[{best_atk_team}]")
             with s_col2:
-                # 펫 사용 횟수 표시
                 st.markdown(f"**🐶 추천 펫** <span style='color:gray; font-size:0.8em'>({best_pet_count}회)</span>", unsafe_allow_html=True)
                 st.text(best_pet)
             with s_col3:
-                # 스순 사용 횟수 표시
                 st.markdown(f"**⚡ 추천 스순** <span style='color:gray; font-size:0.8em'>({best_skill_count}회)</span>", unsafe_allow_html=True)
                 st.markdown(f"{best_skill} <span style='background:#dcfce7; color:#166534; padding:2px 6px; border-radius:4px; font-size:0.8em;'>Best</span>", unsafe_allow_html=True)
+            with s_col4:
+                # 속공 추천 표시
+                st.markdown(f"**🏃 추천 속공** <span style='color:gray; font-size:0.8em'>({best_speed_count}회)</span>", unsafe_allow_html=True)
+                st.text(best_speed)
 
             # 상세 정보 섹션
             st.divider()
@@ -226,12 +248,12 @@ else:
 
             for atk_team, atk_df in atk_groups:
                 count = len(atk_df)
-                # 각 공격팀마다 Expander 생성
                 with st.expander(f"⚔️ {atk_team} ({count}회)"):
-                    detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '방어팀 펫', '방어팀 스순']).size().reset_index(name='빈도')
+                    # 상세 데이터 집계 (속공 포함)
+                    detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '속공', '방어팀 펫', '방어팀 스순']).size().reset_index(name='빈도')
                     detail_counts = detail_counts.sort_values('빈도', ascending=False)
                     
-                    detail_counts.columns = ['공격 펫', '공격 스순', '상대 펫', '상대 스순', '빈도']
+                    detail_counts.columns = ['공격 펫', '공격 스순', '속공', '상대 펫', '상대 스순', '빈도']
                     
                     st.dataframe(
                         detail_counts, 
