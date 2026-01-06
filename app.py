@@ -255,7 +255,7 @@ def get_mode(series):
     count = valid[valid == mode_val].shape[0]
     return mode_val, count
 
-# [추가] 속공 분포(선공/후공) 계산 함수
+# [수정] 속공 분포(선공/후공) 계산 함수 (디자인 개선)
 def get_speed_distribution(series):
     if series.empty: return "-"
     valid = series[series != '']
@@ -265,15 +265,19 @@ def get_speed_distribution(series):
     sun = counts.get('선공', 0)
     hoo = counts.get('후공', 0)
     
+    # 펫/스킬 카운트와 동일한 스타일 (작고 회색인 괄호)
+    span_style = "color:#6b7280; font-size:0.8em; font-weight:400;"
+    
     if sun == 0 and hoo == 0:
         # 혹시 선공/후공 외 다른 값이 있다면
-        return get_mode(series)[0]
+        mode_val, count = get_mode(series)
+        return f"<b>{mode_val}</b> <span style='{span_style}'>({count}회)</span>"
     
     parts = []
-    if sun > 0: parts.append(f"선공({sun})")
-    if hoo > 0: parts.append(f"후공({hoo})")
+    if sun > 0: parts.append(f"<b>선공</b> <span style='{span_style}'>({sun}회)</span>")
+    if hoo > 0: parts.append(f"<b>후공</b> <span style='{span_style}'>({hoo}회)</span>")
     
-    return " ".join(parts)
+    return "&nbsp; ".join(parts) # 가독성을 위해 간격 추가
 
 # ---------------------------------------------------------
 # 3. UI 구성
@@ -387,7 +391,7 @@ else:
         best_pet, best_pet_count = get_mode(best_atk_data['공격팀 펫'])
         best_skill, best_skill_count = get_mode(best_atk_data['공격팀 스순'])
         
-        # [수정] 속공은 분포로 표시
+        # [수정] 속공은 분포로 표시 (HTML 함수 사용)
         speed_dist = get_speed_distribution(best_atk_data['속공'])
         
         # HTML 생성
@@ -471,7 +475,7 @@ else:
                             <div style="font-size: 0.85rem; font-weight: 600; color: #4b5563; margin-bottom: 8px;">💡 이 조합의 추천 세팅</div>
                             <div style="display: flex; flex-wrap: wrap; gap: 15px; font-size: 0.9rem;">
                                 <div>🐶 <b>{sub_pet}</b> <span style="color:#6b7280; font-size:0.8em">({sub_pet_cnt}회)</span></div>
-                                <div>🏃 <b>{sub_speed_dist}</b></div>
+                                <div>🏃 {sub_speed_dist}</div>
                                 <div>⚡ <b>{sub_skill}</b> <span style="color:#6b7280; font-size:0.8em">({sub_skill_cnt}회)</span></div>
                             </div>
                         </div>
