@@ -446,6 +446,7 @@ else:
     # Footer
     st.markdown("""
         <div style='text-align: center; color: #9ca3af; font-size: 0.8rem; margin-top: 30px;'>
-            데이터 출처: 길드전 답지 | 문의: 콩쌍
+            데이터 출처: 판다 길드전 | 문의: 콩쌍
         </div>
     """, unsafe_allow_html=True)
+
