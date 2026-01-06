@@ -231,7 +231,8 @@ def get_badge_style(count, pick_rate):
     if count < 3:
         return "background-color: #9ca3af;", "🧪 표본 적음" # 회색
     
-    if pick_rate >= 30:
+    # [수정] 강력 추천 조건 강화: 표본 10개 이상일 때만 부여
+    if pick_rate >= 30 and count >= 10:
         return "background-color: #2563eb;", "🔥 강력 추천" # 파랑
     elif pick_rate >= 20:
         return "background-color: #3b82f6;", "✅ 무난함" # 연한 파랑
@@ -428,9 +429,10 @@ else:
                 
                 # 공격팀별로 Expander 생성 (중첩 문제 해결)
                 with st.expander(f"⚔️ {atk_team} ({cnt}회 / {ratio:.1f}%)"):
-                    detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '속공', '방어팀 펫']).size().reset_index(name='빈도')
+                    # [수정] 상세 기록에 '방어팀 스순' 추가
+                    detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '속공', '방어팀 펫', '방어팀 스순']).size().reset_index(name='빈도')
                     detail_counts = detail_counts.sort_values('빈도', ascending=False)
-                    detail_counts.columns = ['공격 펫', '공격 스순', '속공', '상대 펫', '빈도']
+                    detail_counts.columns = ['공격 펫', '공격 스순', '속공', '상대 펫', '상대 스순', '빈도']
                     
                     st.dataframe(
                         detail_counts, 
