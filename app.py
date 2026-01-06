@@ -187,8 +187,9 @@ def load_data():
     df['방어팀_정렬'] = df['방어팀'].apply(normalize_team)
     df['공격팀_정렬'] = df['공격팀'].apply(normalize_team)
     
-    # 텍스트 컬럼 전처리
-    for col in ['방어팀 스순', '방어팀 펫', '공격팀 펫', '공격팀 스순', '속공']:
+    # [수정] '상대 길드'와 '기준' 열 추가 전처리
+    target_cols = ['방어팀 스순', '방어팀 펫', '공격팀 펫', '공격팀 스순', '속공', '상대 길드', '기준']
+    for col in target_cols:
         if col in df.columns:
             df[col] = df[col].fillna('').astype(str).str.strip()
         else:
@@ -285,6 +286,14 @@ with st.sidebar:
     )
     
     st.divider()
+
+    # [추가] 상대 길드 필터
+    unique_guilds = sorted([g for g in df['상대 길드'].unique().tolist() if g]) # 빈 값 제외
+    selected_guilds = st.multiselect("🏰 상대 길드 선택", unique_guilds)
+    if selected_guilds:
+        st.caption("ℹ️ 길드를 선택하면 '기준'이 '공격'인 데이터만 필터링됩니다.")
+
+    st.divider()
     search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공")
     st.caption("공백으로 구분하여 여러 명 검색 가능")
 
@@ -294,11 +303,13 @@ filtered_df = df.copy()
 # [수정] 날짜 필터링 로직 (리스트 기반)
 if selected_dates:
     filtered_df = filtered_df[filtered_df['날짜'].isin(selected_dates)]
-else:
-    # 날짜를 아무것도 선택하지 않으면 전체 데이터를 보여줄지, 아무것도 안 보여줄지 결정
-    # 사용자 편의상 '전체'로 처리하거나, 혹은 '모두 선택' 버튼을 유도. 
-    # 여기서는 "선택된 날짜가 없으면 전체 데이터"로 처리
-    pass 
+
+# [추가] 상대 길드 및 기준 필터링 로직
+if selected_guilds:
+    # 1. 선택한 길드만 필터링
+    filtered_df = filtered_df[filtered_df['상대 길드'].isin(selected_guilds)]
+    # 2. 길드 필터 적용 시 '기준'이 '공격'인 것만 필터링
+    filtered_df = filtered_df[filtered_df['기준'] == '공격']
 
 if search_query:
     keywords = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
@@ -312,7 +323,7 @@ if search_query:
 
 # --- 메인 리스트 ---
 if filtered_df.empty:
-    st.info("검색 결과가 없습니다. 날짜를 확인하거나 검색 조건을 변경해보세요.")
+    st.info("검색 결과가 없습니다. 날짜/길드 조건을 확인하거나 검색어를 변경해보세요.")
 else:
     # 방어팀 기준으로 그룹화
     grouped = filtered_df.groupby('방어팀_정렬')
@@ -449,4 +460,3 @@ else:
             데이터 출처: 판다 길드전 | 문의: 콩쌍
         </div>
     """, unsafe_allow_html=True)
-
