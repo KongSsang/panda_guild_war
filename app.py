@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import os
-import textwrap  # [추가] 들여쓰기 제거를 위한 모듈
 
 # ---------------------------------------------------------
 # 페이지 설정
@@ -234,6 +233,12 @@ def get_badge_style(count, pick_rate):
     else:
         return "background-color: #f59e0b;", "⚠️ 취향 갈림" # 노랑
 
+def clean_html(raw_html):
+    """HTML 코드의 모든 들여쓰기와 줄바꿈을 제거하여 한 줄로 만듭니다.
+       이를 통해 st.markdown이 코드로 인식하는 문제를 방지합니다.
+    """
+    return "".join([line.strip() for line in raw_html.splitlines()])
+
 # ---------------------------------------------------------
 # 3. UI 구성
 # ---------------------------------------------------------
@@ -331,8 +336,8 @@ else:
         bar_color = badge_style.split(":")[1].replace(";", "").strip()
 
         # 4. 카드 렌더링
-        # [중요] textwrap.dedent를 사용하여 들여쓰기로 인한 코드 블록 인식 문제를 방지합니다.
-        card_html = textwrap.dedent(f"""
+        # [수정] clean_html 함수를 통해 들여쓰기와 줄바꿈을 모두 제거하여 한 줄 문자열로 변환
+        raw_html = f"""
             <div class="custom-card">
                 <!-- 헤더: 방어팀 + 배지 -->
                 <div class="card-header">
@@ -375,10 +380,10 @@ else:
                     <div class="skill-box">{best_skill}</div>
                 </div>
             </div>
-        """)
+        """
         
         with st.container():
-            st.markdown(card_html, unsafe_allow_html=True)
+            st.markdown(clean_html(raw_html), unsafe_allow_html=True)
 
             # 5. 상세 내역 (Expander)
             with st.expander(f"📊 '{defense_team}' 상대 전체 통계 보기"):
