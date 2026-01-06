@@ -246,6 +246,15 @@ def clean_html(raw_html):
     """
     return "".join([line.strip() for line in raw_html.splitlines()])
 
+# [추가] 최빈값(Mode) 계산 함수 전역으로 이동 (재사용 위함)
+def get_mode(series):
+    if series.empty: return "-", 0
+    valid = series[series != '']
+    if valid.empty: return "-", 0
+    mode_val = valid.mode()[0]
+    count = valid[valid == mode_val].shape[0]
+    return mode_val, count
+
 # ---------------------------------------------------------
 # 3. UI 구성
 # ---------------------------------------------------------
@@ -261,56 +270,44 @@ if df is None:
 with st.sidebar:
     st.header("🔍 필터 옵션")
     
-    unique_dates = sorted(df['날짜'].unique().tolist(), reverse=True)
+    # [수정] 1. 상대 캐릭터 검색을 최상단으로 이동
+    search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공")
+    st.caption("공백으로 구분하여 여러 명 검색 가능")
     
-    # [수정] 날짜 다중 선택을 위한 Session State 관리
+    st.divider()
+
+    # [수정] 2. 날짜 선택
+    unique_dates = sorted(df['날짜'].unique().tolist(), reverse=True)
     if 'selected_date_list' not in st.session_state:
-        # 기본값: 최근 5개 날짜 (데이터가 있다면)
         st.session_state['selected_date_list'] = unique_dates[:5] if len(unique_dates) >= 5 else unique_dates
 
-    # [추가] 날짜 선택 편의 버튼
     col1, col2 = st.columns(2)
     if col1.button("모두 선택"):
         st.session_state['selected_date_list'] = unique_dates
-        st.rerun() # 버튼 클릭 시 즉시 반영을 위해 재실행
+        st.rerun()
         
     if col2.button("최근 5번"):
         st.session_state['selected_date_list'] = unique_dates[:5] if len(unique_dates) >= 5 else unique_dates
         st.rerun()
     
-    # [수정] Multiselect 위젯
     selected_dates = st.multiselect(
         "📅 날짜 선택 (다중 선택 가능)", 
         unique_dates,
-        key='selected_date_list' # session_state와 연동
+        key='selected_date_list'
     )
     
     st.divider()
 
-    # [추가] 상대 길드 필터
-    unique_guilds = sorted([g for g in df['상대 길드'].unique().tolist() if g]) # 빈 값 제외
+    # [수정] 3. 상대 길드 선택
+    unique_guilds = sorted([g for g in df['상대 길드'].unique().tolist() if g])
     selected_guilds = st.multiselect("🏰 상대 길드 선택", unique_guilds)
     if selected_guilds:
         st.caption("ℹ️ 길드를 선택하면 '기준'이 '공격'인 데이터만 필터링됩니다.")
 
-    st.divider()
-    search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공")
-    st.caption("공백으로 구분하여 여러 명 검색 가능")
-
 # --- 필터링 로직 ---
 filtered_df = df.copy()
 
-# [수정] 날짜 필터링 로직 (리스트 기반)
-if selected_dates:
-    filtered_df = filtered_df[filtered_df['날짜'].isin(selected_dates)]
-
-# [추가] 상대 길드 및 기준 필터링 로직
-if selected_guilds:
-    # 1. 선택한 길드만 필터링
-    filtered_df = filtered_df[filtered_df['상대 길드'].isin(selected_guilds)]
-    # 2. 길드 필터 적용 시 '기준'이 '공격'인 것만 필터링
-    filtered_df = filtered_df[filtered_df['기준'] == '공격']
-
+# 1. 캐릭터 검색 (순서상 위지만 로직은 필터링이므로)
 if search_query:
     keywords = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
     if keywords:
@@ -321,9 +318,18 @@ if search_query:
         mask = filtered_df['방어팀_정렬'].apply(lambda x: check_all_keywords(x, keywords))
         filtered_df = filtered_df[mask]
 
+# 2. 날짜 필터
+if selected_dates:
+    filtered_df = filtered_df[filtered_df['날짜'].isin(selected_dates)]
+
+# 3. 길드 필터
+if selected_guilds:
+    filtered_df = filtered_df[filtered_df['상대 길드'].isin(selected_guilds)]
+    filtered_df = filtered_df[filtered_df['기준'] == '공격']
+
 # --- 메인 리스트 ---
 if filtered_df.empty:
-    st.info("검색 결과가 없습니다. 날짜/길드 조건을 확인하거나 검색어를 변경해보세요.")
+    st.info("검색 결과가 없습니다. 필터 조건을 변경해보세요.")
 else:
     # 방어팀 기준으로 그룹화
     grouped = filtered_df.groupby('방어팀_정렬')
@@ -344,7 +350,7 @@ else:
         match_count = item['count']
         group_data = item['data']
         
-        # 1. 가장 많이 쓰인 공격팀 찾기
+        # 1. 가장 많이 쓰인 공격팀 찾기 (메인 카드용)
         atk_counts = group_data['공격팀_정렬'].value_counts()
         if atk_counts.empty:
             continue
@@ -358,25 +364,15 @@ else:
         # 해당 공격팀을 사용한 데이터만 추출 (펫, 스순 분석용)
         best_atk_data = group_data[group_data['공격팀_정렬'] == best_atk_team]
         
-        # 2. 최빈값(Mode) 계산 함수
-        def get_mode(series):
-            if series.empty: return "-", 0
-            valid = series[series != '']
-            if valid.empty: return "-", 0
-            mode_val = valid.mode()[0]
-            count = valid[valid == mode_val].shape[0]
-            return mode_val, count
-
+        # 최빈값 계산
         best_pet, best_pet_count = get_mode(best_atk_data['공격팀 펫'])
         best_skill, best_skill_count = get_mode(best_atk_data['공격팀 스순'])
         best_speed, best_speed_count = get_mode(best_atk_data['속공'])
         
-        # 3. HTML 생성 준비
+        # HTML 생성
         def_tags = format_hero_tags(defense_team)
         atk_tags = format_hero_tags(best_atk_team)
         badge_style, badge_text = get_badge_style(match_count, pick_rate)
-        
-        # 픽률 바 색상 (배지 배경색과 동일하게)
         bar_color = badge_style.split(":")[1].replace(";", "").strip()
 
         # 4. 카드 렌더링 (메인 추천)
@@ -428,7 +424,7 @@ else:
         with st.container():
             st.markdown(clean_html(raw_html), unsafe_allow_html=True)
 
-            # [수정] 상세 내역을 공격팀별 Expander로 나열
+            # [상세 내역] 공격팀별 Expander로 나열
             st.markdown("<div style='margin-bottom:5px; font-size:0.85rem; color:#6b7280;'>🔻 공격팀별 상세 기록</div>", unsafe_allow_html=True)
             
             atk_groups = [ (k, v) for k, v in group_data.groupby('공격팀_정렬') ]
@@ -438,9 +434,27 @@ else:
                 cnt = len(atk_df)
                 ratio = (cnt / match_count) * 100
                 
-                # 공격팀별로 Expander 생성 (중첩 문제 해결)
+                # 공격팀별로 Expander 생성
                 with st.expander(f"⚔️ {atk_team} ({cnt}회 / {ratio:.1f}%)"):
-                    # [수정] 상세 기록에 '방어팀 스순' 추가
+                    
+                    # [추가] 상세 내역 내부의 추천 정보 계산
+                    sub_pet, sub_pet_cnt = get_mode(atk_df['공격팀 펫'])
+                    sub_skill, sub_skill_cnt = get_mode(atk_df['공격팀 스순'])
+                    sub_speed, sub_speed_cnt = get_mode(atk_df['속공'])
+                    
+                    # [추가] 상세 내역 내부 추천 정보 표시
+                    st.markdown(f"""
+                        <div style="background-color: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #e5e7eb;">
+                            <div style="font-size: 0.85rem; font-weight: 600; color: #4b5563; margin-bottom: 8px;">💡 이 조합의 추천 세팅</div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 15px; font-size: 0.9rem;">
+                                <div>🐶 <b>{sub_pet}</b> <span style="color:#6b7280; font-size:0.8em">({sub_pet_cnt}회)</span></div>
+                                <div>🏃 <b>{sub_speed}</b> <span style="color:#6b7280; font-size:0.8em">({sub_speed_cnt}회)</span></div>
+                                <div>⚡ <b>{sub_skill}</b> <span style="color:#6b7280; font-size:0.8em">({sub_skill_cnt}회)</span></div>
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+                    # 기존 상세 표
                     detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '속공', '방어팀 펫', '방어팀 스순']).size().reset_index(name='빈도')
                     detail_counts = detail_counts.sort_values('빈도', ascending=False)
                     detail_counts.columns = ['공격 펫', '공격 스순', '속공', '상대 펫', '상대 스순', '빈도']
@@ -457,6 +471,6 @@ else:
     # Footer
     st.markdown("""
         <div style='text-align: center; color: #9ca3af; font-size: 0.8rem; margin-top: 30px;'>
-            데이터 출처: 판다 길드전 | 문의: 콩쌍
+            데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
         </div>
     """, unsafe_allow_html=True)
