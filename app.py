@@ -12,24 +12,29 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# CSS 스타일 (모바일 최적화)
+# CSS 스타일 (모바일 최적화 및 UI 개선)
 # ---------------------------------------------------------
 st.markdown("""
     <style>
     /* 전체 폰트 및 배경 설정 */
     .block-container {
-        padding-top: 3rem; /* 제목 잘림 방지 */
+        padding-top: 2rem;
         padding-bottom: 5rem;
+        max-width: 800px; /* 모바일/태블릿 가독성을 위해 최대 폭 제한 */
     }
     
     /* 카드 스타일 */
     .custom-card {
         background-color: white;
-        padding: 15px;
-        border-radius: 12px;
+        padding: 20px;
+        border-radius: 16px;
         border: 1px solid #e5e7eb;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-bottom: 15px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        margin-bottom: 20px;
+        transition: transform 0.2s;
+    }
+    .custom-card:hover {
+        border-color: #cbd5e1;
     }
     
     /* 헤더 스타일 */
@@ -38,63 +43,95 @@ st.markdown("""
         justify-content: space-between;
         align-items: center;
         border-bottom: 1px solid #f3f4f6;
-        padding-bottom: 10px;
-        margin-bottom: 10px;
+        padding-bottom: 12px;
+        margin-bottom: 15px;
     }
-    .def-team-name {
-        font-size: 1.1rem;
+    .def-label {
+        font-size: 0.8rem;
+        color: #ef4444; /* 방어팀은 붉은 계열 */
         font-weight: 700;
-        color: #1f2937;
+        margin-right: 4px;
     }
-    .data-badge {
-        background-color: #e0e7ff;
-        color: #4338ca;
+    
+    /* 데이터 배지 (신뢰도) */
+    .badge {
         padding: 4px 8px;
         border-radius: 6px;
-        font-size: 0.8rem;
-        font-weight: 600;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: white;
         white-space: nowrap;
     }
-
+    
+    /* 영웅 이름 칩(Chip) 스타일 */
+    .hero-chip {
+        display: inline-block;
+        background-color: #f3f4f6;
+        border: 1px solid #d1d5db;
+        color: #374151;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-right: 4px;
+        margin-bottom: 4px;
+    }
+    
     /* 정보 행 스타일 */
     .info-row {
-        margin-bottom: 8px;
+        margin-bottom: 12px;
     }
     .label {
         font-size: 0.85rem;
         color: #6b7280;
         font-weight: 600;
-        margin-bottom: 2px;
+        margin-bottom: 4px;
     }
     .value {
         font-size: 1rem;
         color: #111827;
         font-weight: 500;
-        word-break: keep-all;
-    }
-    .value-highlight {
-        color: #2563eb;
-        font-weight: 700;
     }
     
-    /* 스킬 순서 박스 */
+    /* 픽률 프로그래스 바 */
+    .progress-container {
+        margin-top: 8px;
+    }
+    .progress-bg {
+        background-color: #f3f4f6;
+        border-radius: 9999px;
+        height: 8px;
+        width: 100%;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        border-radius: 9999px;
+        transition: width 0.5s ease-in-out;
+    }
+    .pick-rate-text {
+        font-size: 0.8rem;
+        color: #6b7280;
+        float: right;
+    }
+    
+    /* 스킬 박스 */
     .skill-box {
         background-color: #f0fdf4;
         border: 1px solid #dcfce7;
-        color: #166534;
+        color: #15803d;
         padding: 8px 12px;
         border-radius: 8px;
-        font-family: monospace;
-        font-weight: 600;
-        margin-top: 5px;
+        font-family: 'Courier New', monospace;
+        font-weight: 700;
+        letter-spacing: 0.5px;
     }
     
-    /* 제작자 표시 */
-    .footer {
-        text-align: center;
-        color: #9ca3af;
-        font-size: 0.8rem;
-        margin-top: 30px;
+    /* 2열 레이아웃 (모바일 대응) */
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -132,6 +169,7 @@ def load_data():
         st.error(f"파일 읽기 오류: {e}")
         return None
 
+    # 영웅 이름 정렬 함수
     def normalize_team(team_str):
         if not isinstance(team_str, str):
             return str(team_str)
@@ -149,7 +187,7 @@ def load_data():
         else:
             df[col] = ''
             
-    # [수정] 속공 표기 통일 (선 -> 선공, 후 -> 후공)
+    # 속공 표기 통일
     if '속공' in df.columns:
         df['속공'] = df['속공'].replace({'선': '선공', '후': '후공'})
 
@@ -164,46 +202,71 @@ def load_data():
 df = load_data()
 
 # ---------------------------------------------------------
-# 2. UI 구성
+# 2. 헬퍼 함수 (HTML 생성용)
+# ---------------------------------------------------------
+def format_hero_tags(team_str):
+    """콤마로 구분된 영웅 이름을 개별 태그(Chip)로 변환"""
+    if not team_str or team_str == '-':
+        return "-"
+    heroes = [h.strip() for h in team_str.split(',')]
+    tags = "".join([f"<span class='hero-chip'>{h}</span>" for h in heroes])
+    return tags
+
+def get_badge_style(count, pick_rate):
+    """데이터 개수와 픽률에 따른 배지 스타일 반환"""
+    if count < 3:
+        return "background-color: #9ca3af;", "🧪 표본 적음" # 회색
+    
+    if pick_rate >= 70:
+        return "background-color: #2563eb;", "🔥 강력 추천" # 파랑
+    elif pick_rate >= 40:
+        return "background-color: #3b82f6;", "✅ 무난함" # 연한 파랑
+    else:
+        return "background-color: #f59e0b;", "⚠️ 취향 갈림" # 노랑
+
+# ---------------------------------------------------------
+# 3. UI 구성
 # ---------------------------------------------------------
 
 st.title("🛡️ 판다 길드전 공격 추천")
-st.markdown("<div style='margin-top: -15px; margin-bottom: 20px; color: gray; font-size: 0.9em;'>made by 콩쌍</div>", unsafe_allow_html=True)
+st.markdown("<div style='margin-top: -15px; margin-bottom: 25px; color: gray; font-size: 0.9em;'>데이터 기반 승리 공식 (made by 콩쌍)</div>", unsafe_allow_html=True)
 
 if df is None:
-    st.error("데이터 파일을 찾을 수 없습니다. GitHub에 파일을 업로드했는지 확인해주세요.")
+    st.error("데이터 파일을 찾을 수 없습니다. (길드전 답지.xlsx 또는 .csv)")
     st.stop()
 
 # --- 사이드바 ---
 with st.sidebar:
-    st.header("🔍 필터")
+    st.header("🔍 필터 옵션")
     
     unique_dates = sorted(df['날짜'].unique().tolist(), reverse=True)
     selected_date = st.selectbox("📅 날짜 선택", ["전체 보기"] + unique_dates)
     
+    st.divider()
     search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공")
+    st.caption("공백으로 구분하여 여러 명 검색 가능")
 
 # --- 필터링 로직 ---
-if search_query:
-    keywords = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
-    if keywords:
-        def check_exact_match(team_str, search_keywords):
-            team_members = [member.strip() for member in team_str.split(',')]
-            return all(keyword in team_members for keyword in search_keywords)
-        mask = df['방어팀_정렬'].apply(lambda x: check_exact_match(x, keywords))
-        filtered_df = df[mask]
-    else:
-        filtered_df = df
-else:
-    filtered_df = df
+filtered_df = df.copy()
 
 if selected_date != "전체 보기":
     filtered_df = filtered_df[filtered_df['날짜'] == selected_date]
 
+if search_query:
+    keywords = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
+    if keywords:
+        def check_all_keywords(team_str, search_keywords):
+            team_members = [member.strip() for member in team_str.split(',')]
+            return all(keyword in team_members for keyword in search_keywords)
+        
+        mask = filtered_df['방어팀_정렬'].apply(lambda x: check_all_keywords(x, keywords))
+        filtered_df = filtered_df[mask]
+
 # --- 메인 리스트 ---
 if filtered_df.empty:
-    st.info("검색 결과가 없습니다.")
+    st.info("검색 결과가 없습니다. 조건을 변경해보세요.")
 else:
+    # 방어팀 기준으로 그룹화
     grouped = filtered_df.groupby('방어팀_정렬')
     
     display_list = []
@@ -213,106 +276,107 @@ else:
             'count': len(group),
             'data': group
         })
+    # 데이터 많은 순 정렬
     display_list.sort(key=lambda x: x['count'], reverse=True)
 
+    # --- 반복문으로 카드 생성 ---
     for item in display_list:
         defense_team = item['defense']
         match_count = item['count']
         group_data = item['data']
         
-        # 추천 값 계산
+        # 1. 가장 많이 쓰인 공격팀 찾기
         atk_counts = group_data['공격팀_정렬'].value_counts()
         best_atk_team = atk_counts.idxmax()
+        best_atk_count = atk_counts.max()
         
+        # 픽률 계산
+        pick_rate = (best_atk_count / match_count) * 100
+        
+        # 해당 공격팀을 사용한 데이터만 추출 (펫, 스순 분석용)
         best_atk_data = group_data[group_data['공격팀_정렬'] == best_atk_team]
         
-        # 펫
-        if not best_atk_data['공격팀 펫'].empty:
-            best_pet = best_atk_data['공격팀 펫'].mode()[0]
-            best_pet_count = best_atk_data[best_atk_data['공격팀 펫'] == best_pet].shape[0]
-        else:
-            best_pet = "-"
-            best_pet_count = 0
-            
-        # 스순
-        if not best_atk_data['공격팀 스순'].empty:
-            best_skill = best_atk_data['공격팀 스순'].mode()[0]
-            best_skill_count = best_atk_data[best_atk_data['공격팀 스순'] == best_skill].shape[0]
-        else:
-            best_skill = "-"
-            best_skill_count = 0
+        # 2. 최빈값(Mode) 계산 함수
+        def get_mode(series):
+            if series.empty: return "-", 0
+            valid = series[series != '']
+            if valid.empty: return "-", 0
+            mode_val = valid.mode()[0]
+            count = valid[valid == mode_val].shape[0]
+            return mode_val, count
 
-        # 속공
-        if '속공' in best_atk_data.columns and not best_atk_data['속공'].replace('', pd.NA).dropna().empty:
-            valid_speed = best_atk_data[best_atk_data['속공'] != '']
-            if not valid_speed.empty:
-                best_speed = valid_speed['속공'].mode()[0]
-                best_speed_count = valid_speed[valid_speed['속공'] == best_speed].shape[0]
-            else:
-                best_speed = "-"
-                best_speed_count = 0
-        else:
-            best_speed = "-"
-            best_speed_count = 0
+        best_pet, best_pet_count = get_mode(best_atk_data['공격팀 펫'])
+        best_skill, best_skill_count = get_mode(best_atk_data['공격팀 스순'])
+        best_speed, best_speed_count = get_mode(best_atk_data['속공'])
         
-        # --- [카드 UI 렌더링] ---
-        # Streamlit 컨테이너 내부에 HTML/CSS 구조 심기
+        # 3. HTML 생성 준비
+        def_tags = format_hero_tags(defense_team)
+        atk_tags = format_hero_tags(best_atk_team)
+        badge_style, badge_text = get_badge_style(match_count, pick_rate)
+        
+        # 픽률 바 색상 (배지 배경색과 동일하게)
+        bar_color = badge_style.split(":")[1].replace(";", "").strip()
+
+        # 4. 카드 렌더링
         with st.container():
-            # 카드 시작
             st.markdown(f"""
             <div class="custom-card">
+                <!-- 헤더: 방어팀 + 배지 -->
                 <div class="card-header">
-                    <div class="def-team-name">VS {defense_team}</div>
-                    <div class="data-badge">{match_count}개의 데이터</div>
+                    <div>
+                        <span class="def-label">VS</span>
+                        {def_tags}
+                    </div>
+                    <div class="badge" style="{badge_style}">{badge_text} ({match_count}건)</div>
                 </div>
-            """, unsafe_allow_html=True)
-            
-            # 1. 공격팀 (한 줄 전체)
-            st.markdown(f"""
-            <div class="info-row">
-                <div class="label">⚔️ 추천 공격팀</div>
-                <div class="value value-highlight">{best_atk_team}</div>
+                
+                <!-- 추천 공격팀 & 픽률 -->
+                <div class="info-row">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:5px;">
+                        <div class="label">⚔️ 추천 공격팀</div>
+                        <div class="pick-rate-text">{pick_rate:.1f}% 픽률</div>
+                    </div>
+                    <div class="value">{atk_tags}</div>
+                    <div class="progress-container">
+                        <div class="progress-bg">
+                            <div class="progress-fill" style="width: {pick_rate}%; background-color: {bar_color};"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 펫 & 속공 (2열 그리드) -->
+                <div class="grid-2">
+                    <div>
+                        <div class="label">🐶 펫 <span style='font-weight:400; font-size:0.75em'>({best_pet_count}회)</span></div>
+                        <div class="value">{best_pet}</div>
+                    </div>
+                    <div>
+                        <div class="label">🏃 속공 <span style='font-weight:400; font-size:0.75em'>({best_speed_count}회)</span></div>
+                        <div class="value">{best_speed}</div>
+                    </div>
+                </div>
+
+                <!-- 스킬 순서 -->
+                <div class="info-row" style="margin-top: 15px;">
+                    <div class="label">⚡ 추천 스순 <span style='font-weight:400; font-size:0.8em'>({best_skill_count}회)</span></div>
+                    <div class="skill-box">{best_skill}</div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # 2. 펫 & 속공 (2단 컬럼)
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown(f"""
-                <div class="info-row">
-                    <div class="label">🐶 펫 <span style='font-weight:400; font-size:0.8em'>({best_pet_count}회)</span></div>
-                    <div class="value">{best_pet}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            with col2:
-                st.markdown(f"""
-                <div class="info-row">
-                    <div class="label">🏃 속공 <span style='font-weight:400; font-size:0.8em'>({best_speed_count}회)</span></div>
-                    <div class="value">{best_speed}</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            # 3. 스킬 순서 (한 줄 전체 + 박스 스타일)
-            st.markdown(f"""
-            <div class="info-row">
-                <div class="label">⚡ 추천 스순 <span style='font-weight:400; font-size:0.8em'>({best_skill_count}회)</span></div>
-                <div class="skill-box">{best_skill}</div>
-            </div>
-            </div> <!-- 카드 끝 -->
-            """, unsafe_allow_html=True)
-
-            # 4. 상세 내역 (Expander)
-            with st.expander("🔻 상세 기록 (클릭)"):
+            # 5. 상세 내역 (Expander)
+            with st.expander(f"📊 '{defense_team}' 상대 전체 통계 보기"):
                 atk_groups = [ (k, v) for k, v in group_data.groupby('공격팀_정렬') ]
                 atk_groups.sort(key=lambda x: len(x[1]), reverse=True)
 
                 for atk_team, atk_df in atk_groups:
-                    count = len(atk_df)
-                    st.markdown(f"**⚔️ {atk_team}** ({count}회 사용)")
+                    cnt = len(atk_df)
+                    ratio = (cnt / match_count) * 100
+                    st.markdown(f"**⚔️ {atk_team}** ({cnt}회 / {ratio:.1f}%)")
                     
-                    detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '속공', '방어팀 펫', '방어팀 스순']).size().reset_index(name='빈도')
+                    detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '속공', '방어팀 펫']).size().reset_index(name='빈도')
                     detail_counts = detail_counts.sort_values('빈도', ascending=False)
-                    detail_counts.columns = ['공격 펫', '공격 스순', '속공', '상대 펫', '상대 스순', '빈도']
+                    detail_counts.columns = ['공격 펫', '공격 스순', '속공', '상대 펫', '빈도']
                     
                     st.dataframe(
                         detail_counts, 
@@ -320,4 +384,11 @@ else:
                         hide_index=True,
                         column_config={"빈도": st.column_config.NumberColumn(format="%d회")}
                     )
-                st.divider() # 구분선
+                    st.divider()
+
+    # Footer
+    st.markdown("""
+        <div style='text-align: center; color: #9ca3af; font-size: 0.8rem; margin-top: 30px;'>
+            데이터 출처: 길드전 답지 | 문의: 콩쌍
+        </div>
+    """, unsafe_allow_html=True)
