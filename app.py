@@ -30,7 +30,7 @@ st.markdown("""
         border-radius: 16px;
         border: 1px solid #e5e7eb;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        margin-bottom: 20px;
+        margin-bottom: 10px; /* 상세내역과 간격을 좁힘 */
         transition: transform 0.2s;
     }
     .custom-card:hover {
@@ -132,6 +132,11 @@ st.markdown("""
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 15px;
+    }
+    
+    /* 버튼 스타일 */
+    .stButton > button {
+        width: 100%;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -255,7 +260,28 @@ with st.sidebar:
     st.header("🔍 필터 옵션")
     
     unique_dates = sorted(df['날짜'].unique().tolist(), reverse=True)
-    selected_date = st.selectbox("📅 날짜 선택", ["전체 보기"] + unique_dates)
+    
+    # [수정] 날짜 다중 선택을 위한 Session State 관리
+    if 'selected_date_list' not in st.session_state:
+        # 기본값: 최근 5개 날짜 (데이터가 있다면)
+        st.session_state['selected_date_list'] = unique_dates[:5] if len(unique_dates) >= 5 else unique_dates
+
+    # [추가] 날짜 선택 편의 버튼
+    col1, col2 = st.columns(2)
+    if col1.button("모두 선택"):
+        st.session_state['selected_date_list'] = unique_dates
+        st.rerun() # 버튼 클릭 시 즉시 반영을 위해 재실행
+        
+    if col2.button("최근 5번"):
+        st.session_state['selected_date_list'] = unique_dates[:5] if len(unique_dates) >= 5 else unique_dates
+        st.rerun()
+    
+    # [수정] Multiselect 위젯
+    selected_dates = st.multiselect(
+        "📅 날짜 선택 (다중 선택 가능)", 
+        unique_dates,
+        key='selected_date_list' # session_state와 연동
+    )
     
     st.divider()
     search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공")
@@ -264,8 +290,14 @@ with st.sidebar:
 # --- 필터링 로직 ---
 filtered_df = df.copy()
 
-if selected_date != "전체 보기":
-    filtered_df = filtered_df[filtered_df['날짜'] == selected_date]
+# [수정] 날짜 필터링 로직 (리스트 기반)
+if selected_dates:
+    filtered_df = filtered_df[filtered_df['날짜'].isin(selected_dates)]
+else:
+    # 날짜를 아무것도 선택하지 않으면 전체 데이터를 보여줄지, 아무것도 안 보여줄지 결정
+    # 사용자 편의상 '전체'로 처리하거나, 혹은 '모두 선택' 버튼을 유도. 
+    # 여기서는 "선택된 날짜가 없으면 전체 데이터"로 처리
+    pass 
 
 if search_query:
     keywords = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
@@ -279,7 +311,7 @@ if search_query:
 
 # --- 메인 리스트 ---
 if filtered_df.empty:
-    st.info("검색 결과가 없습니다. 조건을 변경해보세요.")
+    st.info("검색 결과가 없습니다. 날짜를 확인하거나 검색 조건을 변경해보세요.")
 else:
     # 방어팀 기준으로 그룹화
     grouped = filtered_df.groupby('방어팀_정렬')
@@ -335,8 +367,7 @@ else:
         # 픽률 바 색상 (배지 배경색과 동일하게)
         bar_color = badge_style.split(":")[1].replace(";", "").strip()
 
-        # 4. 카드 렌더링
-        # [수정] clean_html 함수를 통해 들여쓰기와 줄바꿈을 모두 제거하여 한 줄 문자열로 변환
+        # 4. 카드 렌더링 (메인 추천)
         raw_html = f"""
             <div class="custom-card">
                 <!-- 헤더: 방어팀 + 배지 -->
@@ -385,16 +416,18 @@ else:
         with st.container():
             st.markdown(clean_html(raw_html), unsafe_allow_html=True)
 
-            # 5. 상세 내역 (Expander)
-            with st.expander(f"📊 '{defense_team}' 상대 전체 통계 보기"):
-                atk_groups = [ (k, v) for k, v in group_data.groupby('공격팀_정렬') ]
-                atk_groups.sort(key=lambda x: len(x[1]), reverse=True)
+            # [수정] 상세 내역을 공격팀별 Expander로 나열
+            st.markdown("<div style='margin-bottom:5px; font-size:0.85rem; color:#6b7280;'>🔻 공격팀별 상세 기록</div>", unsafe_allow_html=True)
+            
+            atk_groups = [ (k, v) for k, v in group_data.groupby('공격팀_정렬') ]
+            atk_groups.sort(key=lambda x: len(x[1]), reverse=True)
 
-                for atk_team, atk_df in atk_groups:
-                    cnt = len(atk_df)
-                    ratio = (cnt / match_count) * 100
-                    st.markdown(f"**⚔️ {atk_team}** ({cnt}회 / {ratio:.1f}%)")
-                    
+            for atk_team, atk_df in atk_groups:
+                cnt = len(atk_df)
+                ratio = (cnt / match_count) * 100
+                
+                # 공격팀별로 Expander 생성 (중첩 문제 해결)
+                with st.expander(f"⚔️ {atk_team} ({cnt}회 / {ratio:.1f}%)"):
                     detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '속공', '방어팀 펫']).size().reset_index(name='빈도')
                     detail_counts = detail_counts.sort_values('빈도', ascending=False)
                     detail_counts.columns = ['공격 펫', '공격 스순', '속공', '상대 펫', '빈도']
@@ -405,7 +438,8 @@ else:
                         hide_index=True,
                         column_config={"빈도": st.column_config.NumberColumn(format="%d회")}
                     )
-                    st.divider()
+            
+            st.markdown("<div style='margin-bottom: 30px;'></div>", unsafe_allow_html=True) # 카드 간 간격 추가
 
     # Footer
     st.markdown("""
