@@ -246,7 +246,7 @@ def clean_html(raw_html):
     """
     return "".join([line.strip() for line in raw_html.splitlines()])
 
-# [추가] 최빈값(Mode) 계산 함수 전역으로 이동 (재사용 위함)
+# [추가] 최빈값(Mode) 계산 함수 전역으로 이동
 def get_mode(series):
     if series.empty: return "-", 0
     valid = series[series != '']
@@ -254,6 +254,26 @@ def get_mode(series):
     mode_val = valid.mode()[0]
     count = valid[valid == mode_val].shape[0]
     return mode_val, count
+
+# [추가] 속공 분포(선공/후공) 계산 함수
+def get_speed_distribution(series):
+    if series.empty: return "-"
+    valid = series[series != '']
+    if valid.empty: return "-"
+    
+    counts = valid.value_counts()
+    sun = counts.get('선공', 0)
+    hoo = counts.get('후공', 0)
+    
+    if sun == 0 and hoo == 0:
+        # 혹시 선공/후공 외 다른 값이 있다면
+        return get_mode(series)[0]
+    
+    parts = []
+    if sun > 0: parts.append(f"선공({sun})")
+    if hoo > 0: parts.append(f"후공({hoo})")
+    
+    return " ".join(parts)
 
 # ---------------------------------------------------------
 # 3. UI 구성
@@ -270,7 +290,7 @@ if df is None:
 with st.sidebar:
     st.header("🔍 필터 옵션")
     
-    # [수정] 1. 상대 캐릭터 검색을 최상단으로 이동
+    # [수정] 1. 상대 캐릭터 검색
     search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공")
     st.caption("공백으로 구분하여 여러 명 검색 가능")
     
@@ -306,7 +326,7 @@ with st.sidebar:
 # --- 필터링 로직 ---
 filtered_df = df.copy()
 
-# 1. 캐릭터 검색 (순서상 위지만 로직은 필터링이므로)
+# 1. 캐릭터 검색
 if search_query:
     keywords = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
     if keywords:
@@ -363,10 +383,12 @@ else:
         # 해당 공격팀을 사용한 데이터만 추출 (펫, 스순 분석용)
         best_atk_data = group_data[group_data['공격팀_정렬'] == best_atk_team]
         
-        # 최빈값 계산
+        # 최빈값 계산 (펫, 스순)
         best_pet, best_pet_count = get_mode(best_atk_data['공격팀 펫'])
         best_skill, best_skill_count = get_mode(best_atk_data['공격팀 스순'])
-        best_speed, best_speed_count = get_mode(best_atk_data['속공'])
+        
+        # [수정] 속공은 분포로 표시
+        speed_dist = get_speed_distribution(best_atk_data['속공'])
         
         # HTML 생성
         def_tags = format_hero_tags(defense_team)
@@ -375,6 +397,7 @@ else:
         bar_color = badge_style.split(":")[1].replace(";", "").strip()
 
         # 4. 카드 렌더링 (메인 추천)
+        # [수정] 속공 부분에 분포 표시
         raw_html = f"""
             <div class="custom-card">
                 <!-- 헤더: 방어팀 + 배지 -->
@@ -407,8 +430,8 @@ else:
                         <div class="value">{best_pet}</div>
                     </div>
                     <div>
-                        <div class="label">🏃 속공 <span style='font-weight:400; font-size:0.75em'>({best_speed_count}회)</span></div>
-                        <div class="value">{best_speed}</div>
+                        <div class="label">🏃 속공</div>
+                        <div class="value" style="font-size:0.95rem;">{speed_dist}</div>
                     </div>
                 </div>
 
@@ -439,7 +462,8 @@ else:
                     # [추가] 상세 내역 내부의 추천 정보 계산
                     sub_pet, sub_pet_cnt = get_mode(atk_df['공격팀 펫'])
                     sub_skill, sub_skill_cnt = get_mode(atk_df['공격팀 스순'])
-                    sub_speed, sub_speed_cnt = get_mode(atk_df['속공'])
+                    # [수정] 상세 내역 내부 속공도 분포로 표시
+                    sub_speed_dist = get_speed_distribution(atk_df['속공'])
                     
                     # [추가] 상세 내역 내부 추천 정보 표시
                     st.markdown(f"""
@@ -447,7 +471,7 @@ else:
                             <div style="font-size: 0.85rem; font-weight: 600; color: #4b5563; margin-bottom: 8px;">💡 이 조합의 추천 세팅</div>
                             <div style="display: flex; flex-wrap: wrap; gap: 15px; font-size: 0.9rem;">
                                 <div>🐶 <b>{sub_pet}</b> <span style="color:#6b7280; font-size:0.8em">({sub_pet_cnt}회)</span></div>
-                                <div>🏃 <b>{sub_speed}</b> <span style="color:#6b7280; font-size:0.8em">({sub_speed_cnt}회)</span></div>
+                                <div>🏃 <b>{sub_speed_dist}</b></div>
                                 <div>⚡ <b>{sub_skill}</b> <span style="color:#6b7280; font-size:0.8em">({sub_skill_cnt}회)</span></div>
                             </div>
                         </div>
