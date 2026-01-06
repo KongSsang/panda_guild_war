@@ -301,8 +301,7 @@ with st.sidebar:
     # [수정] 3. 상대 길드 선택
     unique_guilds = sorted([g for g in df['상대 길드'].unique().tolist() if g])
     selected_guilds = st.multiselect("🏰 상대 길드 선택", unique_guilds)
-    if selected_guilds:
-        st.caption("ℹ️ 길드를 선택하면 '기준'이 '공격'인 데이터만 필터링됩니다.")
+    st.caption("선택 시 해당 길드를 상대로 공격한 기록만 보여줍니다.")
 
 # --- 필터링 로직 ---
 filtered_df = df.copy()
