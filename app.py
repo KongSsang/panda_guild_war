@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import textwrap  # [추가] 들여쓰기 제거를 위한 모듈
 
 # ---------------------------------------------------------
 # 페이지 설정
@@ -169,11 +170,13 @@ def load_data():
         st.error(f"파일 읽기 오류: {e}")
         return None
 
-    # 영웅 이름 정렬 함수
+    # 영웅 이름 정렬 및 전처리 함수 (빈 값 제거 강화)
     def normalize_team(team_str):
         if not isinstance(team_str, str):
+            if pd.isna(team_str): return ""
             return str(team_str)
-        characters = [char.strip() for char in team_str.split(',')]
+        # 쉼표로 나누고, 앞뒤 공백 제거 후 빈 문자열 제외
+        characters = [char.strip() for char in team_str.split(',') if char.strip()]
         characters.sort()
         return ", ".join(characters)
 
@@ -197,6 +200,10 @@ def load_data():
     else:
         df['날짜'] = 'Unknown'
         
+    # 유효한 데이터만 남기기 (방어팀이나 공격팀 이름이 빈 경우 제외)
+    df = df[df['방어팀_정렬'] != ""]
+    df = df[df['공격팀_정렬'] != ""]
+        
     return df
 
 df = load_data()
@@ -208,7 +215,10 @@ def format_hero_tags(team_str):
     """콤마로 구분된 영웅 이름을 개별 태그(Chip)로 변환"""
     if not team_str or team_str == '-':
         return "-"
-    heroes = [h.strip() for h in team_str.split(',')]
+    # 빈 값 필터링을 한 번 더 수행하여 안전하게 처리
+    heroes = [h.strip() for h in team_str.split(',') if h.strip()]
+    if not heroes:
+        return "-"
     tags = "".join([f"<span class='hero-chip'>{h}</span>" for h in heroes])
     return tags
 
@@ -217,9 +227,9 @@ def get_badge_style(count, pick_rate):
     if count < 3:
         return "background-color: #9ca3af;", "🧪 표본 적음" # 회색
     
-    if pick_rate >= 70:
+    if pick_rate >= 30:
         return "background-color: #2563eb;", "🔥 강력 추천" # 파랑
-    elif pick_rate >= 40:
+    elif pick_rate >= 20:
         return "background-color: #3b82f6;", "✅ 무난함" # 연한 파랑
     else:
         return "background-color: #f59e0b;", "⚠️ 취향 갈림" # 노랑
@@ -287,6 +297,9 @@ else:
         
         # 1. 가장 많이 쓰인 공격팀 찾기
         atk_counts = group_data['공격팀_정렬'].value_counts()
+        if atk_counts.empty:
+            continue
+            
         best_atk_team = atk_counts.idxmax()
         best_atk_count = atk_counts.max()
         
@@ -318,12 +331,12 @@ else:
         bar_color = badge_style.split(":")[1].replace(";", "").strip()
 
         # 4. 카드 렌더링
-        with st.container():
-            st.markdown(f"""
+        # [중요] textwrap.dedent를 사용하여 들여쓰기로 인한 코드 블록 인식 문제를 방지합니다.
+        card_html = textwrap.dedent(f"""
             <div class="custom-card">
                 <!-- 헤더: 방어팀 + 배지 -->
                 <div class="card-header">
-                    <div>
+                    <div style="flex: 1;">
                         <span class="def-label">VS</span>
                         {def_tags}
                     </div>
@@ -362,7 +375,10 @@ else:
                     <div class="skill-box">{best_skill}</div>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+        """)
+        
+        with st.container():
+            st.markdown(card_html, unsafe_allow_html=True)
 
             # 5. 상세 내역 (Expander)
             with st.expander(f"📊 '{defense_team}' 상대 전체 통계 보기"):
