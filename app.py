@@ -284,7 +284,19 @@ def get_speed_distribution(series):
 # ---------------------------------------------------------
 
 st.title("🛡️ 판다 길드전 공격 추천")
-st.markdown("<div style='margin-top: -15px; margin-bottom: 25px; color: gray; font-size: 0.9em;'>데이터 기반 승리 공식 (made by 콩쌍)</div>", unsafe_allow_html=True)
+
+# [추가] 최근 업데이트 날짜 구하기
+last_update_text = ""
+if df is not None and not df.empty and '날짜' in df.columns:
+    # 날짜 컬럼을 내림차순 정렬하여 가장 최근 날짜 가져오기
+    dates = sorted(df['날짜'].unique().tolist(), reverse=True)
+    if dates:
+        last_update_text = f"Last Update: {dates[0]}"
+
+st.markdown(f"""
+<div style='margin-top: -15px; margin-bottom: 5px; color: gray; font-size: 0.9em;'>데이터 기반 승리 공식 (made by 콩쌍)</div>
+<div style='margin-bottom: 25px; color: #9ca3af; font-size: 0.8rem;'>{last_update_text}</div>
+""", unsafe_allow_html=True)
 
 if df is None:
     st.error("데이터 파일을 찾을 수 없습니다. (길드전 답지.xlsx 또는 .csv)")
