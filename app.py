@@ -31,41 +31,45 @@ MATCHUP_DB = {
             스킬 순서 : 플라튼2엘리스1엘리스2  
             """
         }
+    },
+    "카구라 밸런스 방덱": {
+        "손오공 극딜덱": {
+            "summary": "딜찍누로 찍어누르는 상성",
+            "formation": "공격 진형, 전열 : 여포, 태오, 카일 후열 : 손오공",
+            "my_setting": [
+                {"name": "손오공", "desc": "치치 / 반반 (전용장비 3옵 필수)"},
+                {"name": "여포", "desc": "속속 / 생생"},
+                {"name": "태오", "desc": "치치 / 반반 (불사 반격 활용)"},
+                {"name": "카일", "desc": "속속 / 반반"},
+                {"name": "펫", "desc": "유"},
+            ],
+            "enemy_info": "상대 카구라의 2스킬(버프 제거)이 빠지기 전까지 오공 분신을 아끼세요.",
+            "operate_tips": """
+            1. **시작**: 상대가 선공이면 맞고 시작. 아군 선공이면 오공 1스킬로 간보기.
+            2. **중반**: 여포가 받피증을 묻히고 태오가 껍질을 까줍니다.
+            3. **피니시**: 상대 펫 스킬이 빠진 직후 오공 각성기로 마무리.
+            """
+        }
+    },
+    "오공 방덱": {
+        "제이브 방덱": {
+            "summary": "반사 딜로 오공 분신을 지우는 카운터",
+            "formation": "기본 진형, 전열 : 룩, 챈슬러 후열 : 제이브",
+            "my_setting": [
+                {"name": "제이브", "desc": "생생 / 반반 (갑옷 3옵)"},
+                {"name": "룩", "desc": "속속 / 막막"},
+                {"name": "챈슬러", "desc": "속속 / 생생"},
+                {"name": "펫", "desc": "루"},
+            ],
+            "enemy_info": "오공이 분신을 쓰자마자 제이브 광역기로 지워야 합니다.",
+            "operate_tips": """
+            1. 오공이 나오면 제이브가 맞으면서 반사 딜 누적.
+            2. 룩의 보호막으로 오공의 폭딜을 한 턴 버팀.
+            3. 제이브 각성기로 정리.
+            """
+        }
     }
 }
-#        "즉사 덱": {
-#            "summary": "상대 힐러(에반 등)를 말려 죽이는 운영",
-#            "formation": "방어 진형, 전열 : 녹스, 챈슬러, 루크 후열 : 크리스",
-#            "my_setting": [
-#                {"name": "크리스", "desc": "속속 / 생생 (상태이상 적중)"},
-#                {"name": "녹스", "desc": "속속 / 생생"},
-#                {"name": "챈슬러", "desc": "속속 / 생생"},
-#                {"name": "루크", "desc": "생생 / 막막"},
-#                {"name": "펫", "desc": "크리"},
-#            ],
-#            "enemy_info": "상대 린의 타격 횟수 무효화를 빠르게 벗기는 게 관건입니다.",
-#            "operate_tips": "크리스 2스킬을 아껴두었다가 상대 불사가 켜지면 즉사로 지워버리세요."
-#        }
-#    },
-#    "오공 방덱": {
-#        "제이브 방덱": {
-#            "summary": "반사 딜로 오공 분신을 지우는 카운터",
-#            "formation": "기본 진형, 전열 : 룩, 챈슬러 후열 : 제이브",
-#            "my_setting": [
-#                {"name": "제이브", "desc": "생생 / 반반 (갑옷 3옵)"},
-#                {"name": "룩", "desc": "속속 / 막막"},
-#                {"name": "챈슬러", "desc": "속속 / 생생"},
-#                {"name": "펫", "desc": "루"},
-#            ],
-#            "enemy_info": "오공이 분신을 쓰자마자 제이브 광역기로 지워야 합니다.",
-#            "operate_tips": """
-#            1. 오공이 나오면 제이브가 맞으면서 반사 딜 누적.
-#            2. 룩의 보호막으로 오공의 폭딜을 한 턴 버팀.
-#            3. 제이브 각성기로 정리.
-#            """
-#        }
-#    }
-#}
 
 # ---------------------------------------------------------
 # CSS 스타일
@@ -245,6 +249,7 @@ def get_badge_style(count, pick_rate):
     else: return "background-color: #f59e0b;", "⚠️ 취향 갈림"
 
 def clean_html(raw_html):
+    """HTML 문자열의 들여쓰기를 제거하여 Streamlit에서 코드로 인식되지 않도록 합니다."""
     return "".join([line.strip() for line in raw_html.splitlines()])
 
 def get_mode(series):
@@ -463,7 +468,8 @@ with tab2:
                     # 기존 문자열 형태일 경우 호환성 유지
                     setting_html = f"<div style='white-space: pre-line; color: #334155; line-height: 1.6;'>{guide['my_setting']}</div>"
 
-                st.markdown(f"""
+                # [중요] f-string으로 HTML 생성 후 clean_html 함수로 들여쓰기 제거
+                guide_html = f"""
                 <div class="custom-card" style="border-left: 5px solid #ef4444; margin-top: 15px;">
                     <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #1f2937;">
                         <span style="color: #ef4444;">VS</span> {enemy_name}
@@ -498,7 +504,10 @@ with tab2:
                         <div style="white-space: pre-line; color: #334155; line-height: 1.6; font-size: 0.95rem;">{guide['operate_tips']}</div>
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
+                """
+                
+                # clean_html을 사용하여 HTML을 렌더링
+                st.markdown(clean_html(guide_html), unsafe_allow_html=True)
                 
                 st.markdown("<div style='margin-bottom: 40px;'></div>", unsafe_allow_html=True)
 
