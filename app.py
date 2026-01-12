@@ -13,30 +13,36 @@ st.set_page_config(
 
 # ---------------------------------------------------------
 # [수정] 매치업 상세 가이드 데이터베이스
-# 구조: { "상대 방덱 이름": { "내 공덱 이름": { 상세 내용... } } }
 # ---------------------------------------------------------
 MATCHUP_DB = {
     "오공 겔리두스 스파이크": {
         "플라튼 엘리스 리나": {
             "summary": "버티고 마지막에 플라튼 빔으로 hp승",
-            "formation": "공격 진형 전열 : 플라튼, 후열 : 리나, 엘리스",
-            "my_setting": """
-            - **플라튼**: 조율자 방방받받 효저 최대
-            - **리나**: 성기사 생생받받 효저 최대
-            - **엘리스**: 조율자 생생받받 효저 최대
-            - **펫**: 6성 파이크
-            """,
+            "formation": "공격 진형, 전열 : 플라튼 후열 : 엘리스, 리나",
+            # [수정] 덱 세팅을 리스트 형태로 구조화하여 가독성 확보
+            "my_setting": [
+                {"name": "플라튼", "desc": "조율자 방방받받 효저 최대"},
+                {"name": "리나", "desc": "성기사 생생받받 효저 최대"},
+                {"name": "엘리스", "desc": "조율자 생생받받 효저 최대"},
+                {"name": "펫", "desc": "파이크 6성"},
+            ],
             "enemy_info": "상대 오공 겔리두스 덱일때, 유 펫 아닐때 가면 승률이 많이 높습니다.",
             "operate_tips": """
-            스킬 순서 : 플라튼2엘리스1엘리스2
+            스킬 순서 : 플라튼2엘리스1엘리스2  
             """
         }
     }
 }
 #        "즉사 덱": {
 #            "summary": "상대 힐러(에반 등)를 말려 죽이는 운영",
-#            "formation": "방어 진형",
-#            "my_setting": "전원 속속/생생, 상태이상 적중 잠재 필수",
+#            "formation": "방어 진형, 전열 : 녹스, 챈슬러, 루크 후열 : 크리스",
+#            "my_setting": [
+#                {"name": "크리스", "desc": "속속 / 생생 (상태이상 적중)"},
+#                {"name": "녹스", "desc": "속속 / 생생"},
+#                {"name": "챈슬러", "desc": "속속 / 생생"},
+#                {"name": "루크", "desc": "생생 / 막막"},
+#                {"name": "펫", "desc": "크리"},
+#            ],
 #            "enemy_info": "상대 린의 타격 횟수 무효화를 빠르게 벗기는 게 관건입니다.",
 #            "operate_tips": "크리스 2스킬을 아껴두었다가 상대 불사가 켜지면 즉사로 지워버리세요."
 #        }
@@ -44,8 +50,13 @@ MATCHUP_DB = {
 #    "오공 방덱": {
 #        "제이브 방덱": {
 #            "summary": "반사 딜로 오공 분신을 지우는 카운터",
-#            "formation": "기본 진형",
-#            "my_setting": "제이브(갑옷 3옵), 룩, 챈슬러",
+#            "formation": "기본 진형, 전열 : 룩, 챈슬러 후열 : 제이브",
+#            "my_setting": [
+#                {"name": "제이브", "desc": "생생 / 반반 (갑옷 3옵)"},
+#                {"name": "룩", "desc": "속속 / 막막"},
+#                {"name": "챈슬러", "desc": "속속 / 생생"},
+#                {"name": "펫", "desc": "루"},
+#            ],
 #            "enemy_info": "오공이 분신을 쓰자마자 제이브 광역기로 지워야 합니다.",
 #            "operate_tips": """
 #            1. 오공이 나오면 제이브가 맞으면서 반사 딜 누적.
@@ -121,8 +132,28 @@ st.markdown("""
         padding: 20px;
         margin-top: 15px;
     }
-    .guide-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
-    .vs-badge { background-color: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+    .guide-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;}
+    
+    /* [추가] 덱 세팅 리스트 스타일 */
+    .setting-item {
+        display: flex;
+        align-items: baseline;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+        border-bottom: 1px dashed #e2e8f0;
+        padding-bottom: 4px;
+    }
+    .setting-name {
+        font-weight: 700;
+        color: #1e293b;
+        margin-right: 10px;
+        min-width: 60px; /* 이름 정렬을 위한 최소 너비 */
+        flex-shrink: 0;
+    }
+    .setting-desc {
+        color: #475569;
+        word-break: break-word; /* 긴 내용 줄바꿈 */
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -417,40 +448,57 @@ with tab2:
             my_decks_map = MATCHUP_DB[enemy_name]
             
             for my_deck_name, guide in my_decks_map.items():
+                
+                # [수정] 덱 세팅을 리스트 형태로 파싱하여 HTML 생성
+                setting_html = ""
+                if isinstance(guide['my_setting'], list):
+                    for item in guide['my_setting']:
+                        setting_html += f"""
+                        <div class="setting-item">
+                            <span class="setting-name">{item['name']}</span>
+                            <span class="setting-desc">{item['desc']}</span>
+                        </div>
+                        """
+                else:
+                    # 기존 문자열 형태일 경우 호환성 유지
+                    setting_html = f"<div style='white-space: pre-line; color: #334155; line-height: 1.6;'>{guide['my_setting']}</div>"
+
                 st.markdown(f"""
                 <div class="custom-card" style="border-left: 5px solid #ef4444; margin-top: 15px;">
                     <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #1f2937;">
                         <span style="color: #ef4444;">VS</span> {enemy_name}
                     </div>
+                    <!-- [수정] 로켓 이모지 -> 칼 이모지 -->
                     <div style="font-size: 1.3rem; font-weight: 800; margin-bottom: 15px; color: #2563eb;">
-                        🚀 {my_deck_name}
+                        ⚔️ {my_deck_name}
                     </div>
                     <div style="background-color: #eff6ff; padding: 10px; border-radius: 8px; color: #1e40af; font-weight: 600; margin-bottom: 15px;">
                         📌 {guide['summary']}
                     </div>
-                    <div class="grid-2">
-                        <div><div class="label">🛡️ 추천 진형</div><div class="value">{guide['formation']}</div></div>
-                        <div><div class="label">⚠️ 상대 특이사항</div><div class="value" style="font-size:0.9rem;">{guide['enemy_info']}</div></div>
+                    
+                    <!-- [수정] 진형 및 특이사항 레이아웃 개선 -->
+                    <div style="margin-bottom: 15px;">
+                        <div class="label" style="margin-bottom:4px;">🛡️ 추천 진형</div>
+                        <div class="value" style="font-size: 0.95rem; color: #334155;">{guide['formation']}</div>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <div class="label" style="margin-bottom:4px;">⚠️ 상대 특이사항</div>
+                        <div class="value" style="font-size: 0.95rem; color: #ef4444;">{guide['enemy_info']}</div>
+                    </div>
+
+                    <!-- [수정] 덱 세팅과 운영법을 위아래로 배치하여 공간 확보 -->
+                    <div class="guide-box">
+                        <div class="guide-title">⚔️ 덱 세팅</div>
+                        {setting_html}
+                    </div>
+                    
+                    <div class="guide-box" style="margin-top: 10px;">
+                        <div class="guide-title">💡 실전 운영법</div>
+                        <div style="white-space: pre-line; color: #334155; line-height: 1.6; font-size: 0.95rem;">{guide['operate_tips']}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                
-                c1, c2 = st.columns([1, 1])
-                with c1:
-                    st.markdown(f"""
-                    <div class="guide-box">
-                        <div class="guide-title">⚔️ 내 덱 세팅</div>
-                        <div style="white-space: pre-line; color: #334155; line-height: 1.6;">{guide['my_setting']}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with c2:
-                    st.markdown(f"""
-                    <div class="guide-box">
-                        <div class="guide-title">💡 실전 운영법</div>
-                        <div style="white-space: pre-line; color: #334155; line-height: 1.6;">{guide['operate_tips']}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
                 
                 st.markdown("<div style='margin-bottom: 40px;'></div>", unsafe_allow_html=True)
 
@@ -460,6 +508,3 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
-
-
-
