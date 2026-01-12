@@ -15,46 +15,46 @@ st.set_page_config(
 # [수정] 매치업 상세 가이드 데이터베이스
 # 구조: { "상대 방덱 이름": { "내 공덱 이름": { 상세 내용... } } }
 # ---------------------------------------------------------
-MATCHUP_DB = {
-    "카구라 밸런스 방덱": {
-        "손오공 극딜덱": {
-            "summary": "딜찍누로 찍어누르는 상성",
-            "formation": "공격 진형 (후열: 손오공)",
-            "my_setting": """
-            - **손오공**: 치치 / 반반 (전용장비 3옵 필수)
-            - **여포**: 속속 / 생생
-            - **태오**: 치치 / 반반 (불사 반격 활용)
-            - **카일**: 속속 / 반반
-            """,
-            "enemy_info": "상대 카구라의 2스킬(버프 제거)이 빠지기 전까지 오공 분신을 아끼세요.",
-            "operate_tips": """
-            1. **시작**: 상대가 선공이면 맞고 시작. 아군 선공이면 오공 1스킬로 간보기.
-            2. **중반**: 여포가 받피증을 묻히고 태오가 껍질을 까줍니다.
-            3. **피니시**: 상대 펫 스킬이 빠진 직후 오공 각성기로 마무리.
-            """
-        },
-        "즉사 덱": {
-            "summary": "상대 힐러(에반 등)를 말려 죽이는 운영",
-            "formation": "방어 진형",
-            "my_setting": "전원 속속/생생, 상태이상 적중 잠재 필수",
-            "enemy_info": "상대 린의 타격 횟수 무효화를 빠르게 벗기는 게 관건입니다.",
-            "operate_tips": "크리스 2스킬을 아껴두었다가 상대 불사가 켜지면 즉사로 지워버리세요."
-        }
-    },
-    "오공 방덱": {
-        "제이브 방덱": {
-            "summary": "반사 딜로 오공 분신을 지우는 카운터",
-            "formation": "기본 진형",
-            "my_setting": "제이브(갑옷 3옵), 룩, 챈슬러",
-            "enemy_info": "오공이 분신을 쓰자마자 제이브 광역기로 지워야 합니다.",
-            "operate_tips": """
-            1. 오공이 나오면 제이브가 맞으면서 반사 딜 누적.
-            2. 룩의 보호막으로 오공의 폭딜을 한 턴 버팀.
-            3. 제이브 각성기로 정리.
-            """
-        }
-    }
-}
+#MATCHUP_DB = {
+#    "카구라 밸런스 방덱": {
+#        "손오공 극딜덱": {
+#            "summary": "딜찍누로 찍어누르는 상성",
+#            "formation": "공격 진형 (후열: 손오공)",
+#            "my_setting": """
+#            - **손오공**: 치치 / 반반 (전용장비 3옵 필수)
+#            - **여포**: 속속 / 생생
+#            - **태오**: 치치 / 반반 (불사 반격 활용)
+#            - **카일**: 속속 / 반반
+#            """,
+#            "enemy_info": "상대 카구라의 2스킬(버프 제거)이 빠지기 전까지 오공 분신을 아끼세요.",
+#            "operate_tips": """
+#            1. **시작**: 상대가 선공이면 맞고 시작. 아군 선공이면 오공 1스킬로 간보기.
+#            2. **중반**: 여포가 받피증을 묻히고 태오가 껍질을 까줍니다.
+#            3. **피니시**: 상대 펫 스킬이 빠진 직후 오공 각성기로 마무리.
+#            """
+#        },
+#        "즉사 덱": {
+#            "summary": "상대 힐러(에반 등)를 말려 죽이는 운영",
+#            "formation": "방어 진형",
+#            "my_setting": "전원 속속/생생, 상태이상 적중 잠재 필수",
+#            "enemy_info": "상대 린의 타격 횟수 무효화를 빠르게 벗기는 게 관건입니다.",
+#            "operate_tips": "크리스 2스킬을 아껴두었다가 상대 불사가 켜지면 즉사로 지워버리세요."
+#        }
+#    },
+#    "오공 방덱": {
+#        "제이브 방덱": {
+#            "summary": "반사 딜로 오공 분신을 지우는 카운터",
+#            "formation": "기본 진형",
+#            "my_setting": "제이브(갑옷 3옵), 룩, 챈슬러",
+#            "enemy_info": "오공이 분신을 쓰자마자 제이브 광역기로 지워야 합니다.",
+#            "operate_tips": """
+#            1. 오공이 나오면 제이브가 맞으면서 반사 딜 누적.
+#            2. 룩의 보호막으로 오공의 폭딜을 한 턴 버팀.
+#            3. 제이브 각성기로 정리.
+#            """
+#        }
+#    }
+#}
 
 # ---------------------------------------------------------
 # CSS 스타일
@@ -391,57 +391,68 @@ with tab1:
             st.markdown("<div style='margin-bottom: 30px;'></div>", unsafe_allow_html=True)
 
 # =========================================================
-# TAB 2: 매치업 상세 가이드
+# TAB 2: 매치업 상세 가이드 (수정됨)
 # =========================================================
 with tab2:
     st.header("📖 매치업 상세 가이드")
     st.caption("특정 방덱을 상대로 어떤 공덱을 어떻게 써야 하는지 확인하세요.")
     
-    # [수정] 2단계 선택 로직: 방어팀 선택 -> 공격팀 선택
-    enemy_decks = list(MATCHUP_DB.keys())
-    selected_enemy = st.selectbox("🛡️ 상대 방덱 선택 (Enemy)", enemy_decks, index=0 if enemy_decks else None)
+    # [수정] 검색창으로 방덱 찾기
+    search_query_guide = st.text_input("🛡️ 상대 방덱 검색", placeholder="예: 카구라, 오공 (비워두면 전체 보기)")
     
-    if selected_enemy:
-        my_decks = list(MATCHUP_DB[selected_enemy].keys())
-        selected_my_deck = st.selectbox("⚔️ 내 공격덱 선택 (My Deck)", my_decks, index=0 if my_decks else None)
-        
-        if selected_my_deck:
-            guide = MATCHUP_DB[selected_enemy][selected_my_deck]
+    # 필터링 로직
+    all_enemies = list(MATCHUP_DB.keys())
+    target_enemies = all_enemies
+    
+    if search_query_guide:
+        keywords = [k.strip() for k in search_query_guide.replace(',', ' ').split() if k.strip()]
+        if keywords:
+            target_enemies = [e for e in all_enemies if any(k in e for k in keywords)]
+    
+    if not target_enemies:
+        st.info("검색 결과가 없습니다.")
+    else:
+        # 검색된 방덱들에 대해 반복 표시
+        for enemy_name in target_enemies:
+            my_decks_map = MATCHUP_DB[enemy_name]
             
-            st.markdown(f"""
-            <div class="custom-card" style="border-left: 5px solid #ef4444; margin-top: 15px;">
-                <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #1f2937;">
-                    <span style="color: #ef4444;">VS</span> {selected_enemy}
-                </div>
-                <div style="font-size: 1.3rem; font-weight: 800; margin-bottom: 15px; color: #2563eb;">
-                    🚀 {selected_my_deck}
-                </div>
-                <div style="background-color: #eff6ff; padding: 10px; border-radius: 8px; color: #1e40af; font-weight: 600; margin-bottom: 15px;">
-                    📌 {guide['summary']}
-                </div>
-                <div class="grid-2">
-                    <div><div class="label">🛡️ 추천 진형</div><div class="value">{guide['formation']}</div></div>
-                    <div><div class="label">⚠️ 상대 특이사항</div><div class="value" style="font-size:0.9rem;">{guide['enemy_info']}</div></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            c1, c2 = st.columns([1, 1])
-            with c1:
+            for my_deck_name, guide in my_decks_map.items():
                 st.markdown(f"""
-                <div class="guide-box">
-                    <div class="guide-title">⚔️ 내 덱 세팅</div>
-                    <div style="white-space: pre-line; color: #334155; line-height: 1.6;">{guide['my_setting']}</div>
+                <div class="custom-card" style="border-left: 5px solid #ef4444; margin-top: 15px;">
+                    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #1f2937;">
+                        <span style="color: #ef4444;">VS</span> {enemy_name}
+                    </div>
+                    <div style="font-size: 1.3rem; font-weight: 800; margin-bottom: 15px; color: #2563eb;">
+                        🚀 {my_deck_name}
+                    </div>
+                    <div style="background-color: #eff6ff; padding: 10px; border-radius: 8px; color: #1e40af; font-weight: 600; margin-bottom: 15px;">
+                        📌 {guide['summary']}
+                    </div>
+                    <div class="grid-2">
+                        <div><div class="label">🛡️ 추천 진형</div><div class="value">{guide['formation']}</div></div>
+                        <div><div class="label">⚠️ 상대 특이사항</div><div class="value" style="font-size:0.9rem;">{guide['enemy_info']}</div></div>
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
-            
-            with c2:
-                st.markdown(f"""
-                <div class="guide-box">
-                    <div class="guide-title">💡 실전 운영법</div>
-                    <div style="white-space: pre-line; color: #334155; line-height: 1.6;">{guide['operate_tips']}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                
+                c1, c2 = st.columns([1, 1])
+                with c1:
+                    st.markdown(f"""
+                    <div class="guide-box">
+                        <div class="guide-title">⚔️ 내 덱 세팅</div>
+                        <div style="white-space: pre-line; color: #334155; line-height: 1.6;">{guide['my_setting']}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with c2:
+                    st.markdown(f"""
+                    <div class="guide-box">
+                        <div class="guide-title">💡 실전 운영법</div>
+                        <div style="white-space: pre-line; color: #334155; line-height: 1.6;">{guide['operate_tips']}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                st.markdown("<div style='margin-bottom: 40px;'></div>", unsafe_allow_html=True)
 
 # Footer
 st.markdown("""
