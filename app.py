@@ -30,7 +30,7 @@ MATCHUP_DB = {
             "operate_tips": """
             스킬 순서 : 플라튼2엘리스1엘리스2
             """
-        },
+        }
 #        "즉사 덱": {
 #            "summary": "상대 힐러(에반 등)를 말려 죽이는 운영",
 #            "formation": "방어 진형",
@@ -458,4 +458,5 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
 
