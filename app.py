@@ -19,7 +19,6 @@ MATCHUP_DB = {
         "플라튼 엘리스 리나": {
             "summary": "버티고 마지막에 플라튼 빔으로 hp승",
             "formation": "<b>공격 진형</b><br>전열 : <b>플라튼</b><br>후열 : <b>엘리스, 리나</b>",
-            # [수정] 덱 세팅을 리스트 형태로 구조화하여 가독성 확보
             "my_setting": [
                 {"name": "플라튼", "desc": "조율자 방방받받 효저 최대"},
                 {"name": "리나", "desc": "성기사 생생받받 효저 최대"},
@@ -27,50 +26,60 @@ MATCHUP_DB = {
                 {"name": "펫", "desc": "파이크 6성"},
             ],
             "enemy_info": "상대 오공 겔리두스 덱일때, 유 펫 아닐때 가면 승률이 많이 높습니다.",
+            "operate_tips": "스킬 순서 : 플라튼2엘리스1엘리스2"
+        }
+    },
+    "카구라 밸런스 방덱": {
+        "손오공 극딜덱": {
+            "summary": "딜찍누로 찍어누르는 상성",
+            "formation": "<b>공격 진형</b><br>전열 : <b>여포, 태오, 카일</b><br>후열 : <b>손오공</b>",
+            "my_setting": [
+                {"name": "손오공", "desc": "치치 / 반반 (전용장비 3옵 필수)"},
+                {"name": "여포", "desc": "속속 / 생생"},
+                {"name": "태오", "desc": "치치 / 반반 (불사 반격 활용)"},
+                {"name": "카일", "desc": "속속 / 반반"},
+                {"name": "펫", "desc": "유"},
+            ],
+            "enemy_info": "상대 카구라의 2스킬(버프 제거)이 빠지기 전까지 오공 분신을 아끼세요.",
             "operate_tips": """
-            스킬 순서 : 플라튼2엘리스1엘리스2  
+            1. **시작**: 상대가 선공이면 맞고 시작. 아군 선공이면 오공 1스킬로 간보기.
+            2. **중반**: 여포가 받피증을 묻히고 태오가 껍질을 까줍니다.
+            3. **피니시**: 상대 펫 스킬이 빠진 직후 오공 각성기로 마무리.
+            """
+        },
+        "즉사 덱": {
+            "summary": "상대 힐러(에반 등)를 말려 죽이는 운영",
+            "formation": "<b>방어 진형</b><br>전열 : <b>녹스, 챈슬러, 루크</b><br>후열 : <b>크리스</b>",
+            "my_setting": [
+                {"name": "크리스", "desc": "속속 / 생생 (상태이상 적중)"},
+                {"name": "녹스", "desc": "속속 / 생생"},
+                {"name": "챈슬러", "desc": "속속 / 생생"},
+                {"name": "루크", "desc": "생생 / 막막"},
+                {"name": "펫", "desc": "크리"},
+            ],
+            "enemy_info": "상대 린의 타격 횟수 무효화를 빠르게 벗기는 게 관건입니다.",
+            "operate_tips": "크리스 2스킬을 아껴두었다가 상대 불사가 켜지면 즉사로 지워버리세요."
+        }
+    },
+    "오공 방덱": {
+        "제이브 방덱": {
+            "summary": "반사 딜로 오공 분신을 지우는 카운터",
+            "formation": "<b>기본 진형</b><br>전열 : <b>룩, 챈슬러</b><br>후열 : <b>제이브</b>",
+            "my_setting": [
+                {"name": "제이브", "desc": "생생 / 반반 (갑옷 3옵)"},
+                {"name": "룩", "desc": "속속 / 막막"},
+                {"name": "챈슬러", "desc": "속속 / 생생"},
+                {"name": "펫", "desc": "루"},
+            ],
+            "enemy_info": "오공이 분신을 쓰자마자 제이브 광역기로 지워야 합니다.",
+            "operate_tips": """
+            1. 오공이 나오면 제이브가 맞으면서 반사 딜 누적.
+            2. 룩의 보호막으로 오공의 폭딜을 한 턴 버팀.
+            3. 제이브 각성기로 정리.
             """
         }
     }
 }
-#    "카구라 밸런스 방덱": {
-#        "손오공 극딜덱": {
-#            "summary": "딜찍누로 찍어누르는 상성",
-#            "formation": "공격 진형, 전열 : 여포, 태오, 카일 후열 : 손오공",
-#            "my_setting": [
-#                {"name": "손오공", "desc": "치치 / 반반 (전용장비 3옵 필수)"},
-#                {"name": "여포", "desc": "속속 / 생생"},
-#                {"name": "태오", "desc": "치치 / 반반 (불사 반격 활용)"},
-#                {"name": "카일", "desc": "속속 / 반반"},
-#                {"name": "펫", "desc": "유"},
-#            ],
-#            "enemy_info": "상대 카구라의 2스킬(버프 제거)이 빠지기 전까지 오공 분신을 아끼세요.",
-#            "operate_tips": """
-#            1. **시작**: 상대가 선공이면 맞고 시작. 아군 선공이면 오공 1스킬로 간보기.
-#            2. **중반**: 여포가 받피증을 묻히고 태오가 껍질을 까줍니다.
-#            3. **피니시**: 상대 펫 스킬이 빠진 직후 오공 각성기로 마무리.
-#            """
-#        }
-#    },
-#    "오공 방덱": {
-#        "제이브 방덱": {
-#            "summary": "반사 딜로 오공 분신을 지우는 카운터",
-#            "formation": "기본 진형, 전열 : 룩, 챈슬러 후열 : 제이브",
-#            "my_setting": [
-#                {"name": "제이브", "desc": "생생 / 반반 (갑옷 3옵)"},
-#                {"name": "룩", "desc": "속속 / 막막"},
-#                {"name": "챈슬러", "desc": "속속 / 생생"},
-#                {"name": "펫", "desc": "루"},
-#            ],
-#            "enemy_info": "오공이 분신을 쓰자마자 제이브 광역기로 지워야 합니다.",
-#            "operate_tips": """
-#            1. 오공이 나오면 제이브가 맞으면서 반사 딜 누적.
-#            2. 룩의 보호막으로 오공의 폭딜을 한 턴 버팀.
-#            3. 제이브 각성기로 정리.
-#            """
-#        }
-#    }
-#}
 
 # ---------------------------------------------------------
 # CSS 스타일
@@ -139,7 +148,7 @@ st.markdown("""
     }
     .guide-title { font-size: 1.1rem; font-weight: 700; color: #1e293b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;}
     
-    /* [추가] 덱 세팅 리스트 스타일 */
+    /* 덱 세팅 리스트 스타일 */
     .setting-item {
         display: flex;
         align-items: baseline;
@@ -195,12 +204,11 @@ def load_data():
         st.error(f"파일 읽기 오류: {e}")
         return None
 
-    # 영웅 이름 정렬 및 전처리 함수 (빈 값 제거 강화)
+    # 영웅 이름 정렬 및 전처리 함수
     def normalize_team(team_str):
         if not isinstance(team_str, str):
             if pd.isna(team_str): return ""
             return str(team_str)
-        # 쉼표로 나누고, 앞뒤 공백 제거 후 빈 문자열 제외
         characters = [char.strip() for char in team_str.split(',') if char.strip()]
         characters.sort()
         return ", ".join(characters)
@@ -208,7 +216,7 @@ def load_data():
     df['방어팀_정렬'] = df['방어팀'].apply(normalize_team)
     df['공격팀_정렬'] = df['공격팀'].apply(normalize_team)
     
-    # '상대 길드'와 '기준' 열 추가 전처리
+    # 데이터 전처리
     target_cols = ['방어팀 스순', '방어팀 펫', '공격팀 펫', '공격팀 스순', '속공', '상대 길드', '기준']
     for col in target_cols:
         if col in df.columns:
@@ -216,7 +224,6 @@ def load_data():
         else:
             df[col] = ''
             
-    # 속공 표기 통일
     if '속공' in df.columns:
         df['속공'] = df['속공'].replace({'선': '선공', '후': '후공'})
 
@@ -226,7 +233,6 @@ def load_data():
     else:
         df['날짜'] = 'Unknown'
         
-    # 유효한 데이터만 남기기 (방어팀이나 공격팀 이름이 빈 경우 제외)
     df = df[df['방어팀_정렬'] != ""]
     df = df[df['공격팀_정렬'] != ""]
         
@@ -250,7 +256,6 @@ def get_badge_style(count, pick_rate):
     else: return "background-color: #f59e0b;", "⚠️ 취향 갈림"
 
 def clean_html(raw_html):
-    """HTML 문자열의 들여쓰기를 제거하여 Streamlit에서 코드로 인식되지 않도록 합니다."""
     return "".join([line.strip() for line in raw_html.splitlines()])
 
 def get_mode(series):
@@ -276,6 +281,15 @@ def get_speed_distribution(series):
     if sun > 0: parts.append(f"<b>선공</b> <span style='{span_style}'>({sun}회)</span>")
     if hoo > 0: parts.append(f"<b>후공</b> <span style='{span_style}'>({hoo}회)</span>")
     return "&nbsp; ".join(parts)
+
+# [추가] 검색어 확장 (동의어 처리) 함수
+def expand_synonyms(keywords):
+    """검색어 리스트를 받아 '브브'와 '쁘'를 서로 확장해줍니다."""
+    expanded = set(keywords)
+    for k in keywords:
+        if k in ['브브', '쁘']:
+            expanded.update(['브브', '쁘'])
+    return list(expanded)
 
 # ---------------------------------------------------------
 # 3. 메인 UI 구성
@@ -331,6 +345,8 @@ with tab1:
     filtered_df = df.copy()
     if search_query:
         keywords = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
+        # [적용] 검색어 확장
+        keywords = expand_synonyms(keywords)
         if keywords:
             mask = filtered_df['방어팀_정렬'].apply(lambda x: all(k in x.split(', ') for k in keywords))
             filtered_df = filtered_df[mask]
@@ -428,34 +444,31 @@ with tab1:
             st.markdown("<div style='margin-bottom: 30px;'></div>", unsafe_allow_html=True)
 
 # =========================================================
-# TAB 2: 매치업 상세 가이드 (수정됨)
+# TAB 2: 매치업 상세 가이드
 # =========================================================
 with tab2:
     st.header("📖 매치업 상세 가이드")
     st.caption("특정 방덱을 상대로 어떤 공덱을 어떻게 써야 하는지 확인하세요.")
     
-    # [수정] 검색창으로 방덱 찾기
     search_query_guide = st.text_input("🛡️ 상대 방덱 검색", placeholder="예: 카구라, 오공 (비워두면 전체 보기)")
     
-    # 필터링 로직
     all_enemies = list(MATCHUP_DB.keys())
     target_enemies = all_enemies
     
     if search_query_guide:
         keywords = [k.strip() for k in search_query_guide.replace(',', ' ').split() if k.strip()]
+        # [적용] 검색어 확장
+        keywords = expand_synonyms(keywords)
         if keywords:
             target_enemies = [e for e in all_enemies if any(k in e for k in keywords)]
     
     if not target_enemies:
         st.info("검색 결과가 없습니다.")
     else:
-        # 검색된 방덱들에 대해 반복 표시
         for enemy_name in target_enemies:
             my_decks_map = MATCHUP_DB[enemy_name]
             
             for my_deck_name, guide in my_decks_map.items():
-                
-                # [수정] 덱 세팅을 리스트 형태로 파싱하여 HTML 생성
                 setting_html = ""
                 if isinstance(guide['my_setting'], list):
                     for item in guide['my_setting']:
@@ -466,16 +479,13 @@ with tab2:
                         </div>
                         """
                 else:
-                    # 기존 문자열 형태일 경우 호환성 유지
                     setting_html = f"<div style='white-space: pre-line; color: #334155; line-height: 1.6;'>{guide['my_setting']}</div>"
 
-                # [중요] f-string으로 HTML 생성 후 clean_html 함수로 들여쓰기 제거
                 guide_html = f"""
                 <div class="custom-card" style="border-left: 5px solid #ef4444; margin-top: 15px;">
                     <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #1f2937;">
                         <span style="color: #ef4444;">VS</span> {enemy_name}
                     </div>
-                    <!-- [수정] 로켓 이모지 -> 칼 이모지 -->
                     <div style="font-size: 1.3rem; font-weight: 800; margin-bottom: 15px; color: #2563eb;">
                         ⚔️ {my_deck_name}
                     </div>
@@ -483,7 +493,6 @@ with tab2:
                         📌 {guide['summary']}
                     </div>
                     
-                    <!-- [수정] 진형 및 특이사항 레이아웃 개선 -->
                     <div style="margin-bottom: 15px;">
                         <div class="label" style="margin-bottom:4px;">🛡️ 추천 진형</div>
                         <div class="value" style="font-size: 0.95rem; color: #334155;">{guide['formation']}</div>
@@ -494,7 +503,6 @@ with tab2:
                         <div class="value" style="font-size: 0.95rem; color: #ef4444;">{guide['enemy_info']}</div>
                     </div>
 
-                    <!-- [수정] 덱 세팅과 운영법을 위아래로 배치하여 공간 확보 -->
                     <div class="guide-box">
                         <div class="guide-title">⚔️ 덱 세팅</div>
                         {setting_html}
@@ -507,7 +515,6 @@ with tab2:
                 </div>
                 """
                 
-                # clean_html을 사용하여 HTML을 렌더링
                 st.markdown(clean_html(guide_html), unsafe_allow_html=True)
                 
                 st.markdown("<div style='margin-bottom: 40px;'></div>", unsafe_allow_html=True)
@@ -518,7 +525,3 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
-
-
-
-
