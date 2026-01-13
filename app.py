@@ -19,6 +19,7 @@ MATCHUP_DB = {
         "플라튼 엘리스 리나": {
             "summary": "버티고 마지막에 플라튼 빔으로 hp승",
             "formation": "<b>공격 진형</b><br>전열 : <b>플라튼</b><br>후열 : <b>엘리스, 리나</b>",
+            # [수정] 덱 세팅을 리스트 형태로 구조화하여 가독성 확보
             "my_setting": [
                 {"name": "플라튼", "desc": "조율자 방방받받 효저 최대"},
                 {"name": "리나", "desc": "성기사 생생받받 효저 최대"},
@@ -282,13 +283,15 @@ def get_speed_distribution(series):
     if hoo > 0: parts.append(f"<b>후공</b> <span style='{span_style}'>({hoo}회)</span>")
     return "&nbsp; ".join(parts)
 
-# [추가] 검색어 확장 (동의어 처리) 함수
+# [수정] 검색어 확장 (동의어 처리) 함수 - 부분 일치도 고려
 def expand_synonyms(keywords):
     """검색어 리스트를 받아 '브브'와 '쁘'를 서로 확장해줍니다."""
     expanded = set(keywords)
     for k in keywords:
-        if k in ['브브', '쁘']:
-            expanded.update(['브브', '쁘'])
+        if '브브' in k:
+            expanded.add(k.replace('브브', '쁘'))
+        if '쁘' in k:
+            expanded.add(k.replace('쁘', '브브'))
     return list(expanded)
 
 # ---------------------------------------------------------
@@ -444,31 +447,38 @@ with tab1:
             st.markdown("<div style='margin-bottom: 30px;'></div>", unsafe_allow_html=True)
 
 # =========================================================
-# TAB 2: 매치업 상세 가이드
+# TAB 2: 매치업 상세 가이드 (수정됨)
 # =========================================================
 with tab2:
     st.header("📖 매치업 상세 가이드")
     st.caption("특정 방덱을 상대로 어떤 공덱을 어떻게 써야 하는지 확인하세요.")
     
+    # [수정] 검색창으로 방덱 찾기
     search_query_guide = st.text_input("🛡️ 상대 방덱 검색", placeholder="예: 카구라, 오공 (비워두면 전체 보기)")
     
+    # 필터링 로직 (방어팀 이름만 검색)
     all_enemies = list(MATCHUP_DB.keys())
     target_enemies = all_enemies
     
     if search_query_guide:
         keywords = [k.strip() for k in search_query_guide.replace(',', ' ').split() if k.strip()]
-        # [적용] 검색어 확장
+        # [적용] 검색어 확장 (브브 <-> 쁘)
         keywords = expand_synonyms(keywords)
+        
         if keywords:
+            # [수정] 방어팀 이름(Key)만 검색하도록 변경 (내용 검색 제거)
             target_enemies = [e for e in all_enemies if any(k in e for k in keywords)]
     
     if not target_enemies:
         st.info("검색 결과가 없습니다.")
     else:
+        # 검색된 방덱들에 대해 반복 표시
         for enemy_name in target_enemies:
             my_decks_map = MATCHUP_DB[enemy_name]
             
             for my_deck_name, guide in my_decks_map.items():
+                
+                # [수정] 덱 세팅을 리스트 형태로 파싱하여 HTML 생성
                 setting_html = ""
                 if isinstance(guide['my_setting'], list):
                     for item in guide['my_setting']:
@@ -479,13 +489,16 @@ with tab2:
                         </div>
                         """
                 else:
+                    # 기존 문자열 형태일 경우 호환성 유지
                     setting_html = f"<div style='white-space: pre-line; color: #334155; line-height: 1.6;'>{guide['my_setting']}</div>"
 
+                # [중요] f-string으로 HTML 생성 후 clean_html 함수로 들여쓰기 제거
                 guide_html = f"""
                 <div class="custom-card" style="border-left: 5px solid #ef4444; margin-top: 15px;">
                     <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #1f2937;">
                         <span style="color: #ef4444;">VS</span> {enemy_name}
                     </div>
+                    <!-- [수정] 로켓 이모지 -> 칼 이모지 -->
                     <div style="font-size: 1.3rem; font-weight: 800; margin-bottom: 15px; color: #2563eb;">
                         ⚔️ {my_deck_name}
                     </div>
@@ -493,6 +506,7 @@ with tab2:
                         📌 {guide['summary']}
                     </div>
                     
+                    <!-- [수정] 진형 및 특이사항 레이아웃 개선 -->
                     <div style="margin-bottom: 15px;">
                         <div class="label" style="margin-bottom:4px;">🛡️ 추천 진형</div>
                         <div class="value" style="font-size: 0.95rem; color: #334155;">{guide['formation']}</div>
@@ -503,6 +517,7 @@ with tab2:
                         <div class="value" style="font-size: 0.95rem; color: #ef4444;">{guide['enemy_info']}</div>
                     </div>
 
+                    <!-- [수정] 덱 세팅과 운영법을 위아래로 배치하여 공간 확보 -->
                     <div class="guide-box">
                         <div class="guide-title">⚔️ 덱 세팅</div>
                         {setting_html}
@@ -515,6 +530,7 @@ with tab2:
                 </div>
                 """
                 
+                # clean_html을 사용하여 HTML을 렌더링
                 st.markdown(clean_html(guide_html), unsafe_allow_html=True)
                 
                 st.markdown("<div style='margin-bottom: 40px;'></div>", unsafe_allow_html=True)
