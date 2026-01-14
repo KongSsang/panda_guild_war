@@ -458,14 +458,15 @@ with tab1:
                         matched_enemy_key = defense_team
                 
                 # [수정] Expander 제목에 가이드 버튼 추가 여부 표시 (박스 및 볼드 처리)
+                # Streamlit Expander 제목은 CSS 정렬을 지원하지 않으므로, 공백(\u00A0)을 사용하여 시각적으로 분리
                 expander_title = f"⚔️ {atk_team} ({cnt}회 / {ratio:.1f}%)"
                 if guide_available:
-                    expander_title += " :violet-background[**📖 공략 있음**]"
+                    expander_title += "\u00A0\u00A0\u00A0\u00A0\u00A0:violet-background[**📖 공략 있음**]"
 
                 with st.expander(expander_title):
                     if guide_available:
                         # [추가] 팝업 버튼
-                        if st.button(f"📖 '{atk_team}' 공략 보기", key=f"btn_{defense_team}_{atk_team}"):
+                        if st.button("📖 상세 세팅 보기"):
                             show_guide_popup(matched_enemy_key, atk_team, matched_guide)
 
                     sub_pet, sub_pet_cnt = get_mode(atk_df['공격팀 펫'])
