@@ -17,7 +17,6 @@ st.set_page_config(
 try:
     from matchup_data import MATCHUP_DB
 except ImportError:
-    # 파일이 없을 경우 빈 딕셔너리로 초기화하여 에러 방지
     MATCHUP_DB = {}
 
 # ---------------------------------------------------------
@@ -222,7 +221,6 @@ def get_speed_distribution(series):
     if hoo > 0: parts.append(f"<b>후공</b> <span style='{span_style}'>({hoo}회)</span>")
     return "&nbsp; ".join(parts)
 
-# [수정] 검색어 확장 (동의어 처리 + 부분 일치)
 def expand_synonyms(keywords):
     """검색어 리스트를 받아 '브브'와 '쁘'를 서로 확장해줍니다."""
     expanded = set(keywords)
@@ -233,23 +231,68 @@ def expand_synonyms(keywords):
             expanded.add(k.replace('쁘', '브브'))
     return list(expanded)
 
-# [수정] 검색 로직 함수 (동의어 처리 + 부분 일치)
 def check_match(target_str, search_terms):
-    """
-    target_str: 검색 대상 문자열 (예: '브브, 카일, 카구라')
-    search_terms: 사용자가 입력한 검색어 리스트 (예: ['브브'])
-    """
     for term in search_terms:
-        # 동의어 확장 (브브 <-> 쁘)
         synonyms = {term}
         if term in ['브브', '쁘']:
             synonyms.update(['브브', '쁘'])
-        
-        # 해당 검색어(또는 동의어) 중 하나라도 target_str에 포함되어 있는지 확인
-        # 부분 일치 허용 (예: '브브' 검색 시 '브브' 포함된 문자열 매칭)
         if not any(syn in target_str for syn in synonyms):
-            return False # 하나라도 만족하지 않으면 False (AND 조건)
+            return False 
     return True
+
+# [추가] 가이드 HTML 생성 함수 (재사용)
+def generate_guide_html(enemy_name, my_deck_name, guide):
+    setting_html = ""
+    if isinstance(guide.get('my_setting'), list):
+        for item in guide['my_setting']:
+            setting_html += f"""
+            <div class="setting-item">
+                <span class="setting-name">{item['name']}</span>
+                <span class="setting-desc">{item['desc']}</span>
+            </div>
+            """
+    else:
+        setting_html = f"<div style='white-space: pre-line; color: #334155; line-height: 1.6;'>{guide.get('my_setting', '-')}</div>"
+
+    return f"""
+    <div class="custom-card" style="border-left: 5px solid #ef4444; margin-top: 5px;">
+        <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #1f2937;">
+            <span style="color: #ef4444;">VS</span> {enemy_name}
+        </div>
+        <div style="font-size: 1.3rem; font-weight: 800; margin-bottom: 15px; color: #2563eb;">
+            ⚔️ {my_deck_name}
+        </div>
+        <div style="background-color: #eff6ff; padding: 10px; border-radius: 8px; color: #1e40af; font-weight: 600; margin-bottom: 15px;">
+            📌 {guide.get('summary', '')}
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <div class="label" style="margin-bottom:4px;">🛡️ 추천 진형</div>
+            <div class="value" style="font-size: 0.95rem; color: #334155;">{guide.get('formation', '-')}</div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <div class="label" style="margin-bottom:4px;">⚠️ 상대 특이사항</div>
+            <div class="value" style="font-size: 0.95rem; color: #ef4444;">{guide.get('enemy_info', '-')}</div>
+        </div>
+
+        <div class="guide-box">
+            <div class="guide-title">⚔️ 덱 세팅</div>
+            {setting_html}
+        </div>
+        
+        <div class="guide-box" style="margin-top: 10px;">
+            <div class="guide-title">💡 실전 운영법</div>
+            <div style="white-space: pre-line; color: #334155; line-height: 1.6; font-size: 0.95rem;">{guide.get('operate_tips', '-')}</div>
+        </div>
+    </div>
+    """
+
+# [추가] 팝업 다이얼로그 함수
+@st.dialog("📖 매치업 상세 공략", width="large")
+def show_guide_popup(enemy_name, my_deck_name, guide):
+    html_content = generate_guide_html(enemy_name, my_deck_name, guide)
+    st.markdown(clean_html(html_content), unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # 3. 메인 UI 구성
@@ -303,15 +346,11 @@ with tab1:
         st.caption("선택 시 해당 길드를 상대로 공격한 기록만 보여줍니다.")
 
     filtered_df = df.copy()
-    
-    # 1. 캐릭터 검색 (동의어 처리 + 올바른 필터링)
     if search_query:
         query_terms = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
         if query_terms:
-            # check_match 함수를 통해 필터링 수행
             mask = filtered_df['방어팀_정렬'].apply(lambda x: check_match(x, query_terms))
             filtered_df = filtered_df[mask]
-
     if selected_dates:
         filtered_df = filtered_df[filtered_df['날짜'].isin(selected_dates)]
     if selected_guilds:
@@ -383,7 +422,41 @@ with tab1:
 
             for atk_team, atk_df in atk_groups:
                 cnt = len(atk_df); ratio = (cnt / match_count) * 100
-                with st.expander(f"⚔️ {atk_team} ({cnt}회 / {ratio:.1f}%)"):
+                
+                # [수정] 팝업 트리거 확인
+                guide_available = False
+                matched_guide = None
+                matched_enemy_key = ""
+                
+                # DB의 방덱 이름과 현재 방덱(defense_team)을 매칭 (부분 일치 또는 포함 관계)
+                # MATCHUP_DB의 키(방어덱 이름)가 defense_team(엑셀 방어팀)에 포함되거나 그 반대일 경우
+                # 더 정확한 매칭을 위해 간단한 키워드 검사
+                def_keywords = [k.strip() for k in defense_team.split(',')]
+                
+                for db_enemy_key in MATCHUP_DB.keys():
+                    # DB 키워드가 현재 방어팀 키워드에 얼마나 포함되는지
+                    db_enemy_keywords = [k.strip() for k in db_enemy_key.split(' ')] # 공백으로 분리된 키워드라 가정
+                    # 간단하게 DB 키가 방어팀 문자열에 포함되는지 확인 (또는 유사도)
+                    # 여기서는 간단히 '오공' 등이 포함되는지 확인
+                    if check_match(defense_team, [db_enemy_key]): # 이전에 만든 check_match 활용
+                         # 공격팀도 매칭 확인
+                         if atk_team in MATCHUP_DB[db_enemy_key]:
+                             guide_available = True
+                             matched_guide = MATCHUP_DB[db_enemy_key][atk_team]
+                             matched_enemy_key = db_enemy_key
+                             break
+                
+                # Expander 제목에 가이드 버튼 추가 여부 표시 (이모지로)
+                expander_title = f"⚔️ {atk_team} ({cnt}회 / {ratio:.1f}%)"
+                if guide_available:
+                    expander_title += " 📖 공략 있음"
+
+                with st.expander(expander_title):
+                    if guide_available:
+                        # [추가] 팝업 버튼
+                        if st.button(f"📖 '{atk_team}' 공략 보기", key=f"btn_{defense_team}_{atk_team}"):
+                            show_guide_popup(matched_enemy_key, atk_team, matched_guide)
+
                     sub_pet, sub_pet_cnt = get_mode(atk_df['공격팀 펫'])
                     sub_skill, sub_skill_cnt = get_mode(atk_df['공격팀 스순'])
                     sub_speed_dist = get_speed_distribution(atk_df['속공'])
@@ -418,73 +491,34 @@ with tab2:
     target_enemies = []
     
     if search_query_guide:
-        # [수정] 탭 2 검색도 동일한 check_match 로직 적용
         query_terms = [k.strip() for k in search_query_guide.replace(',', ' ').split() if k.strip()]
-        
         if query_terms:
             target_enemies = [e for e in all_enemies if check_match(e, query_terms)]
     else:
-        target_enemies = all_enemies # 검색어 없으면 전체 표시
+        target_enemies = all_enemies
     
     if not target_enemies:
         st.info("검색 결과가 없습니다.")
     else:
         for enemy_name in target_enemies:
-            my_decks_map = MATCHUP_DB[enemy_name]
-            
-            for my_deck_name, guide in my_decks_map.items():
-                setting_html = ""
-                if isinstance(guide['my_setting'], list):
-                    for item in guide['my_setting']:
-                        setting_html += f"""
-                        <div class="setting-item">
-                            <span class="setting-name">{item['name']}</span>
-                            <span class="setting-desc">{item['desc']}</span>
-                        </div>
-                        """
+            # [수정] 방어덱 별로 Expander 그룹화
+            with st.expander(f"🛡️ VS {enemy_name}", expanded=True):
+                my_decks_map = MATCHUP_DB[enemy_name]
+                
+                # 공격덱이 여러 개일 경우 탭으로 분리, 하나면 바로 표시
+                if len(my_decks_map) > 1:
+                    tabs = st.tabs([f"⚔️ {name}" for name in my_decks_map.keys()])
+                    for i, (my_deck_name, guide) in enumerate(my_decks_map.items()):
+                        with tabs[i]:
+                            html_content = generate_guide_html(enemy_name, my_deck_name, guide)
+                            st.markdown(clean_html(html_content), unsafe_allow_html=True)
                 else:
-                    setting_html = f"<div style='white-space: pre-line; color: #334155; line-height: 1.6;'>{guide['my_setting']}</div>"
-
-                guide_html = f"""
-                <div class="custom-card" style="border-left: 5px solid #ef4444; margin-top: 15px;">
-                    <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #1f2937;">
-                        <span style="color: #ef4444;">VS</span> {enemy_name}
-                    </div>
-                    <!-- [수정] 로켓 이모지 -> 칼 이모지 -->
-                    <div style="font-size: 1.3rem; font-weight: 800; margin-bottom: 15px; color: #2563eb;">
-                        ⚔️ {my_deck_name}
-                    </div>
-                    <div style="background-color: #eff6ff; padding: 10px; border-radius: 8px; color: #1e40af; font-weight: 600; margin-bottom: 15px;">
-                        📌 {guide['summary']}
-                    </div>
-                    
-                    <!-- [수정] 진형 및 특이사항 레이아웃 개선 -->
-                    <div style="margin-bottom: 15px;">
-                        <div class="label" style="margin-bottom:4px;">🛡️ 추천 진형</div>
-                        <div class="value" style="font-size: 0.95rem; color: #334155;">{guide['formation']}</div>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px;">
-                        <div class="label" style="margin-bottom:4px;">⚠️ 상대 특이사항</div>
-                        <div class="value" style="font-size: 0.95rem; color: #ef4444;">{guide['enemy_info']}</div>
-                    </div>
-
-                    <!-- [수정] 덱 세팅과 운영법을 위아래로 배치하여 공간 확보 -->
-                    <div class="guide-box">
-                        <div class="guide-title">⚔️ 덱 세팅</div>
-                        {setting_html}
-                    </div>
-                    
-                    <div class="guide-box" style="margin-top: 10px;">
-                        <div class="guide-title">💡 실전 운영법</div>
-                        <div style="white-space: pre-line; color: #334155; line-height: 1.6; font-size: 0.95rem;">{guide['operate_tips']}</div>
-                    </div>
-                </div>
-                """
-                
-                st.markdown(clean_html(guide_html), unsafe_allow_html=True)
-                
-                st.markdown("<div style='margin-bottom: 40px;'></div>", unsafe_allow_html=True)
+                    my_deck_name = list(my_decks_map.keys())[0]
+                    guide = my_decks_map[my_deck_name]
+                    html_content = generate_guide_html(enemy_name, my_deck_name, guide)
+                    st.markdown(clean_html(html_content), unsafe_allow_html=True)
+            
+            st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
 # Footer
 st.markdown("""
