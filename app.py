@@ -457,10 +457,10 @@ with tab1:
                         matched_guide = MATCHUP_DB[defense_team][atk_team]
                         matched_enemy_key = defense_team
                 
-                # Expander 제목에 가이드 버튼 추가 여부 표시 (이모지로)
+                # [수정] Expander 제목에 가이드 버튼 추가 여부 표시 (박스 및 볼드 처리)
                 expander_title = f"⚔️ {atk_team} ({cnt}회 / {ratio:.1f}%)"
                 if guide_available:
-                    expander_title += " 📖 공략 있음"
+                    expander_title += " :violet-background[**📖 공략 있음**]"
 
                 with st.expander(expander_title):
                     if guide_available:
@@ -498,7 +498,6 @@ with tab2:
     
     search_query_guide = st.text_input("🛡️ 상대 방덱 검색", placeholder="예: 카구라, 오공 (비워두면 전체 보기)")
     
-    # [수정] 정규화된 DB의 키를 사용하여 필터링
     all_enemies = list(MATCHUP_DB.keys())
     target_enemies = []
     
