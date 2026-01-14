@@ -17,6 +17,7 @@ st.set_page_config(
 try:
     from matchup_data import MATCHUP_DB
 except ImportError:
+    # 파일이 없을 경우 빈 딕셔너리로 초기화하여 에러 방지
     MATCHUP_DB = {}
 
 # ---------------------------------------------------------
@@ -110,6 +111,31 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
+# [데이터 전처리] 영웅 이름 정렬 함수 (전역 사용)
+# ---------------------------------------------------------
+def normalize_team_str(team_str):
+    """문자열 내 영웅 이름을 가나다순으로 정렬하여 표준화합니다."""
+    if not isinstance(team_str, str): return str(team_str)
+    # 콤마나 공백으로 분리
+    parts = team_str.replace(',', ' ').split()
+    # 공백 제거 및 정렬
+    parts = [p.strip() for p in parts if p.strip()]
+    parts.sort()
+    return ", ".join(parts)
+
+# [데이터 전처리] MATCHUP_DB 키 정규화
+# 사용자가 "오공 겔리두스"라고 입력했어도 "겔리두스, 오공"으로 변환하여 매칭 확률을 높입니다.
+if MATCHUP_DB:
+    NORMALIZED_DB = {}
+    for enemy, my_decks in MATCHUP_DB.items():
+        norm_enemy = normalize_team_str(enemy)
+        NORMALIZED_DB[norm_enemy] = {}
+        for my_deck, guide in my_decks.items():
+            norm_my_deck = normalize_team_str(my_deck)
+            NORMALIZED_DB[norm_enemy][norm_my_deck] = guide
+    MATCHUP_DB = NORMALIZED_DB
+
+# ---------------------------------------------------------
 # 1. 데이터 로드 및 전처리
 # ---------------------------------------------------------
 @st.cache_data
@@ -142,17 +168,9 @@ def load_data():
         st.error(f"파일 읽기 오류: {e}")
         return None
 
-    # 영웅 이름 정렬 및 전처리 함수
-    def normalize_team(team_str):
-        if not isinstance(team_str, str):
-            if pd.isna(team_str): return ""
-            return str(team_str)
-        characters = [char.strip() for char in team_str.split(',') if char.strip()]
-        characters.sort()
-        return ", ".join(characters)
-
-    df['방어팀_정렬'] = df['방어팀'].apply(normalize_team)
-    df['공격팀_정렬'] = df['공격팀'].apply(normalize_team)
+    # [수정] 위에서 정의한 전역 normalize_team_str 함수 사용
+    df['방어팀_정렬'] = df['방어팀'].apply(normalize_team_str)
+    df['공격팀_정렬'] = df['공격팀'].apply(normalize_team_str)
     
     # 데이터 전처리
     target_cols = ['방어팀 스순', '방어팀 펫', '공격팀 펫', '공격팀 스순', '속공', '상대 길드', '기준']
@@ -423,28 +441,21 @@ with tab1:
             for atk_team, atk_df in atk_groups:
                 cnt = len(atk_df); ratio = (cnt / match_count) * 100
                 
-                # [수정] 팝업 트리거 확인
+                # [수정] 팝업 트리거 확인 (정규화된 키 사용)
                 guide_available = False
                 matched_guide = None
                 matched_enemy_key = ""
                 
-                # DB의 방덱 이름과 현재 방덱(defense_team)을 매칭 (부분 일치 또는 포함 관계)
-                # MATCHUP_DB의 키(방어덱 이름)가 defense_team(엑셀 방어팀)에 포함되거나 그 반대일 경우
-                # 더 정확한 매칭을 위해 간단한 키워드 검사
-                def_keywords = [k.strip() for k in defense_team.split(',')]
+                # 엑셀 데이터의 방덱 이름(defense_team)과 공덱 이름(atk_team)은 이미 정규화되어 있음 (load_data에서 처리)
+                # MATCHUP_DB의 키들도 앱 시작 시 정규화되어 있음
                 
-                for db_enemy_key in MATCHUP_DB.keys():
-                    # DB 키워드가 현재 방어팀 키워드에 얼마나 포함되는지
-                    db_enemy_keywords = [k.strip() for k in db_enemy_key.split(' ')] # 공백으로 분리된 키워드라 가정
-                    # 간단하게 DB 키가 방어팀 문자열에 포함되는지 확인 (또는 유사도)
-                    # 여기서는 간단히 '오공' 등이 포함되는지 확인
-                    if check_match(defense_team, [db_enemy_key]): # 이전에 만든 check_match 활용
-                         # 공격팀도 매칭 확인
-                         if atk_team in MATCHUP_DB[db_enemy_key]:
-                             guide_available = True
-                             matched_guide = MATCHUP_DB[db_enemy_key][atk_team]
-                             matched_enemy_key = db_enemy_key
-                             break
+                # 1. 방어덱 매칭 시도
+                if defense_team in MATCHUP_DB:
+                    # 2. 공격덱 매칭 시도
+                    if atk_team in MATCHUP_DB[defense_team]:
+                        guide_available = True
+                        matched_guide = MATCHUP_DB[defense_team][atk_team]
+                        matched_enemy_key = defense_team
                 
                 # Expander 제목에 가이드 버튼 추가 여부 표시 (이모지로)
                 expander_title = f"⚔️ {atk_team} ({cnt}회 / {ratio:.1f}%)"
@@ -487,6 +498,7 @@ with tab2:
     
     search_query_guide = st.text_input("🛡️ 상대 방덱 검색", placeholder="예: 카구라, 오공 (비워두면 전체 보기)")
     
+    # [수정] 정규화된 DB의 키를 사용하여 필터링
     all_enemies = list(MATCHUP_DB.keys())
     target_enemies = []
     
