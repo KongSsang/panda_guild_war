@@ -263,6 +263,14 @@ def check_match(target_str, search_terms):
             return False 
     return True
 
+# [추가] 난이도 별점 생성 함수
+def get_star_rating(score):
+    if not isinstance(score, int): return ""
+    score = max(0, min(score, 5))
+    filled = "★" * score
+    empty = "☆" * (5 - score)
+    return f"<span style='color: #f59e0b; font-size: 1.1rem; letter-spacing: 2px;'>{filled}{empty}</span>"
+
 # [추가] 가이드 HTML 생성 함수 (재사용)
 def generate_guide_html(enemy_name, my_deck_name, guide):
     setting_html = ""
@@ -277,6 +285,12 @@ def generate_guide_html(enemy_name, my_deck_name, guide):
     else:
         setting_html = f"<div style='white-space: pre-line; color: #334155; line-height: 1.6;'>{guide.get('my_setting', '-')}</div>"
 
+    # [추가] 난이도 표시용 HTML 생성
+    diff_score = guide.get('difficulty', 0)
+    star_html = ""
+    if diff_score > 0:
+        star_html = f"&nbsp;&nbsp;&nbsp;<span style='background-color: #fffbeb; color: #b45309; padding: 2px 8px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; border: 1px solid #fcd34d;'>세팅 난이도 {get_star_rating(diff_score)}</span>"
+
     return f"""
     <div class="custom-card" style="border-left: 5px solid #ef4444; margin-top: 5px;">
         <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #1f2937;">
@@ -286,7 +300,7 @@ def generate_guide_html(enemy_name, my_deck_name, guide):
             ⚔️ {my_deck_name}
         </div>
         <div style="background-color: #eff6ff; padding: 10px; border-radius: 8px; color: #1e40af; font-weight: 600; margin-bottom: 15px;">
-            📌 {guide.get('summary', '')}
+            📌 {guide.get('summary', '')} {star_html}
         </div>
         
         <div style="margin-bottom: 15px;">
@@ -466,7 +480,8 @@ with tab1:
                 # Streamlit Expander 제목은 CSS 정렬을 지원하지 않으므로, 공백(\u00A0)을 사용하여 시각적으로 분리
                 expander_title = f"⚔️ {atk_team} ({cnt}회 / {ratio:.1f}%)"
                 if guide_available:
-                    expander_title += "\u00A0\u00A0\u00A0\u00A0:violet-background[**📖 공략 있음**]"
+                    # 공백 4개로 조정
+                    expander_title += "\u00A0" * 4 + ":violet-background[**📖 공략 있음**]"
 
                 with st.expander(expander_title):
                     if guide_available:
@@ -502,9 +517,8 @@ with tab2:
     st.header("📖 매치업 상세 가이드")
     st.caption("특정 방덱을 상대로 어떤 공덱을 어떻게 써야 하는지 확인하세요.")
     
-    search_query_guide = st.text_input("🛡️ 상대 방어덱 검색", placeholder="예: 카구라, 오공 (비워두면 전체 보기)")
+    search_query_guide = st.text_input("🛡️ 상대 방덱 검색", placeholder="예: 카구라, 오공 (비워두면 전체 보기)")
     
-    # [수정] 정규화된 DB의 키를 사용하여 필터링
     all_enemies = list(MATCHUP_DB.keys())
     target_enemies = []
     
@@ -544,12 +558,3 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
