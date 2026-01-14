@@ -75,7 +75,12 @@ st.markdown("""
     .skill-box { background-color: #f0fdf4; border: 1px solid #dcfce7; color: #15803d; padding: 8px 12px; border-radius: 8px; font-family: 'Courier New', monospace; font-weight: 700; letter-spacing: 0.5px; }
     
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    .stButton > button { width: 100%; }
+    
+    /* [수정] 버튼 스타일: font-weight를 700(Bold)으로 설정 */
+    .stButton > button { 
+        width: 100%; 
+        font-weight: 700 !important; 
+    }
 
     /* 가이드 탭 스타일 */
     .guide-box {
@@ -461,12 +466,12 @@ with tab1:
                 # Streamlit Expander 제목은 CSS 정렬을 지원하지 않으므로, 공백(\u00A0)을 사용하여 시각적으로 분리
                 expander_title = f"⚔️ {atk_team} ({cnt}회 / {ratio:.1f}%)"
                 if guide_available:
-                    expander_title += "\u00A0\u00A0\u00A0\u00A0\u00A0:violet-background[**📖 공략 있음**]"
+                    expander_title += "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0:violet-background[**📖 공략 있음**]"
 
                 with st.expander(expander_title):
                     if guide_available:
-                        # [추가] 팝업 버튼
-                        if st.button("📖 상세 세팅 보기"):
+                        # [추가] 팝업 버튼 (키는 반드시 고유해야 함)
+                        if st.button("📖 세팅 디테일 보기", key=f"btn_{defense_team}_{atk_team}"):
                             show_guide_popup(matched_enemy_key, atk_team, matched_guide)
 
                     sub_pet, sub_pet_cnt = get_mode(atk_df['공격팀 펫'])
@@ -499,6 +504,7 @@ with tab2:
     
     search_query_guide = st.text_input("🛡️ 상대 방덱 검색", placeholder="예: 카구라, 오공 (비워두면 전체 보기)")
     
+    # [수정] 정규화된 DB의 키를 사용하여 필터링
     all_enemies = list(MATCHUP_DB.keys())
     target_enemies = []
     
