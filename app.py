@@ -41,7 +41,7 @@ MATCHUP_DB = {
                 {"name": "펫", "desc": "파이크"},
             ],
             "enemy_info": "아멜리아 혼란넣고 수정이랑 역류로 말려죽입니다. 전반요구치 ↓",
-            "operate_tips": "스킬 순서 : 린2 멜키르2 멜키르1
+            "operate_tips": "스킬 순서 : 린2 멜키르2 멜키르1"
         }
     }
 }
@@ -536,4 +536,5 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
 
