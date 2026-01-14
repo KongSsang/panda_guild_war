@@ -12,72 +12,13 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# [수정] 매치업 상세 가이드 데이터베이스
+# [데이터 로드] matchup_data.py 파일에서 덱 정보 불러오기
 # ---------------------------------------------------------
-MATCHUP_DB = {
-    "오공 겔리두스 스파이크": {
-        "플라튼 엘리스 리나": {
-            "summary": "버티고 마지막에 플라튼 빔으로 hp승",
-            "formation": "<b>공격 진형</b><br>전열 : <b>플라튼</b><br>후열 : <b>엘리스, 리나</b>",
-            # [수정] 덱 세팅을 리스트 형태로 구조화하여 가독성 확보
-            "my_setting": [
-                {"name": "플라튼", "desc": "조율자 방방받받 효저 최대"},
-                {"name": "리나", "desc": "성기사 생생받받 효저 최대"},
-                {"name": "엘리스", "desc": "조율자 생생받받 효저 최대"},
-                {"name": "펫", "desc": "파이크 6성"},
-            ],
-            "enemy_info": "상대 오공 겔리두스 덱일때, 유 펫 아닐때 가면 승률이 많이 높습니다.",
-            "operate_tips": "스킬 순서 : 플라튼2엘리스1엘리스2"
-        }
-    },
-    "트루드 스파이크 아멜리아": {
-        "린 멜키르 밀리아": {
-            "summary": "혼란으로 아멜리아 스킬 빗나가게 만들기",
-            "formation": "<b>공격 진형</b><br>전열 : <b>밀리아</b><br>후열 : <b>린, 멜키르</b>",
-            "my_setting": [
-                {"name": "린", "desc": "추적자 약치받받"},
-                {"name": "멜키르", "desc": "조율자 효적100 공공"},
-                {"name": "밀리아", "desc": "수문장 or 수호자 막100"},
-                {"name": "펫", "desc": "루6성, 크리6성"},
-            ],
-            "enemy_info": "아멜리아 혼란넣고 수정이랑 역류로 말려죽입니다. 전반요구치 ↓, 선공따야합니다.",
-            "operate_tips": "스킬 순서 : 린2 멜키르2 멜키르1"
-        }
-    }
-}
-#        "즉사 덱": {
-#            "summary": "상대 힐러(에반 등)를 말려 죽이는 운영",
-#            "formation": "<b>방어 진형</b><br>전열 : <b>녹스, 챈슬러, 루크</b><br>후열 : <b>크리스</b>",
-#            "my_setting": [
-#                {"name": "크리스", "desc": "속속 / 생생 (상태이상 적중)"},
-#                {"name": "녹스", "desc": "속속 / 생생"},
-#                {"name": "챈슬러", "desc": "속속 / 생생"},
-#                {"name": "루크", "desc": "생생 / 막막"},
-#                {"name": "펫", "desc": "크리"},
-#            ],
-#            "enemy_info": "상대 린의 타격 횟수 무효화를 빠르게 벗기는 게 관건입니다.",
-#            "operate_tips": "크리스 2스킬을 아껴두었다가 상대 불사가 켜지면 즉사로 지워버리세요."
-#        }
-#    },
-#    "오공 방덱": {
-#        "제이브 방덱": {
-#            "summary": "반사 딜로 오공 분신을 지우는 카운터",
-#            "formation": "<b>기본 진형</b><br>전열 : <b>룩, 챈슬러</b><br>후열 : <b>제이브</b>",
-#            "my_setting": [
-#                {"name": "제이브", "desc": "생생 / 반반 (갑옷 3옵)"},
-#                {"name": "룩", "desc": "속속 / 막막"},
-#                {"name": "챈슬러", "desc": "속속 / 생생"},
-#                {"name": "펫", "desc": "루"},
-#            ],
-#            "enemy_info": "오공이 분신을 쓰자마자 제이브 광역기로 지워야 합니다.",
-#            "operate_tips": """
-#            1. 오공이 나오면 제이브가 맞으면서 반사 딜 누적.
-#            2. 룩의 보호막으로 오공의 폭딜을 한 턴 버팀.
-#            3. 제이브 각성기로 정리.
-#            """
-#        }
-#    }
-#}
+try:
+    from matchup_data import MATCHUP_DB
+except ImportError:
+    # 파일이 없을 경우 빈 딕셔너리로 초기화하여 에러 방지
+    MATCHUP_DB = {}
 
 # ---------------------------------------------------------
 # CSS 스타일
@@ -254,6 +195,7 @@ def get_badge_style(count, pick_rate):
     else: return "background-color: #f59e0b;", "⚠️ 취향 갈림"
 
 def clean_html(raw_html):
+    """HTML 문자열의 들여쓰기를 제거하여 Streamlit에서 코드로 인식되지 않도록 합니다."""
     return "".join([line.strip() for line in raw_html.splitlines()])
 
 def get_mode(series):
@@ -279,6 +221,17 @@ def get_speed_distribution(series):
     if sun > 0: parts.append(f"<b>선공</b> <span style='{span_style}'>({sun}회)</span>")
     if hoo > 0: parts.append(f"<b>후공</b> <span style='{span_style}'>({hoo}회)</span>")
     return "&nbsp; ".join(parts)
+
+# [수정] 검색어 확장 (동의어 처리 + 부분 일치)
+def expand_synonyms(keywords):
+    """검색어 리스트를 받아 '브브'와 '쁘'를 서로 확장해줍니다."""
+    expanded = set(keywords)
+    for k in keywords:
+        if '브브' in k:
+            expanded.add(k.replace('브브', '쁘'))
+        if '쁘' in k:
+            expanded.add(k.replace('쁘', '브브'))
+    return list(expanded)
 
 # [수정] 검색 로직 함수 (동의어 처리 + 부분 일치)
 def check_match(target_str, search_terms):
@@ -351,11 +304,9 @@ with tab1:
 
     filtered_df = df.copy()
     
-    # [수정] 1. 캐릭터 검색 (동의어 처리 + 올바른 필터링)
+    # 1. 캐릭터 검색 (동의어 처리 + 올바른 필터링)
     if search_query:
-        # 입력된 검색어를 공백/콤마로 분리
         query_terms = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
-        
         if query_terms:
             # check_match 함수를 통해 필터링 수행
             mask = filtered_df['방어팀_정렬'].apply(lambda x: check_match(x, query_terms))
@@ -464,7 +415,7 @@ with tab2:
     search_query_guide = st.text_input("🛡️ 상대 방덱 검색", placeholder="예: 카구라, 오공 (비워두면 전체 보기)")
     
     all_enemies = list(MATCHUP_DB.keys())
-    target_enemies = all_enemies
+    target_enemies = []
     
     if search_query_guide:
         # [수정] 탭 2 검색도 동일한 check_match 로직 적용
@@ -472,6 +423,8 @@ with tab2:
         
         if query_terms:
             target_enemies = [e for e in all_enemies if check_match(e, query_terms)]
+    else:
+        target_enemies = all_enemies # 검색어 없으면 전체 표시
     
     if not target_enemies:
         st.info("검색 결과가 없습니다.")
@@ -497,6 +450,7 @@ with tab2:
                     <div style="font-size: 1.1rem; font-weight: 700; margin-bottom: 5px; color: #1f2937;">
                         <span style="color: #ef4444;">VS</span> {enemy_name}
                     </div>
+                    <!-- [수정] 로켓 이모지 -> 칼 이모지 -->
                     <div style="font-size: 1.3rem; font-weight: 800; margin-bottom: 15px; color: #2563eb;">
                         ⚔️ {my_deck_name}
                     </div>
@@ -504,6 +458,7 @@ with tab2:
                         📌 {guide['summary']}
                     </div>
                     
+                    <!-- [수정] 진형 및 특이사항 레이아웃 개선 -->
                     <div style="margin-bottom: 15px;">
                         <div class="label" style="margin-bottom:4px;">🛡️ 추천 진형</div>
                         <div class="value" style="font-size: 0.95rem; color: #334155;">{guide['formation']}</div>
@@ -514,6 +469,7 @@ with tab2:
                         <div class="value" style="font-size: 0.95rem; color: #ef4444;">{guide['enemy_info']}</div>
                     </div>
 
+                    <!-- [수정] 덱 세팅과 운영법을 위아래로 배치하여 공간 확보 -->
                     <div class="guide-box">
                         <div class="guide-title">⚔️ 덱 세팅</div>
                         {setting_html}
@@ -536,7 +492,3 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
-
-
-
-
