@@ -112,6 +112,30 @@ st.markdown("""
         color: #475569;
         word-break: break-word; /* 긴 내용 줄바꿈 */
     }
+    
+    /* 공지사항 스타일 */
+    .notice-card {
+        background-color: #fff;
+        border-left: 4px solid #3b82f6;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
+    }
+    .notice-date {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+    .notice-content {
+        color: #334155;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    .notice-content li {
+        margin-bottom: 4px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -351,7 +375,8 @@ if df is None:
     st.stop()
 
 # --- 탭 구성 ---
-tab1, tab2 = st.tabs(["⚔️ 공격 덱 추천", "📖 매치업 상세 가이드"])
+# [수정] 공지사항 탭 추가
+tab1, tab2, tab3 = st.tabs(["⚔️ 공격 덱 추천", "📖 매치업 상세 가이드", "📢 공지사항"])
 
 # =========================================================
 # TAB 1: 공격 추천
@@ -359,13 +384,19 @@ tab1, tab2 = st.tabs(["⚔️ 공격 덱 추천", "📖 매치업 상세 가이�
 with tab1:
     with st.sidebar:
         st.header("🔍 필터 옵션")
+        
+        # [추가] 공격/방어/전체 보기 필터
+        view_type = st.radio("데이터 기준", ["전체", "공격", "방어"], horizontal=True)
+        st.divider()
+        
         search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공")
         st.caption("공백으로 구분하여 여러 명 검색 가능")
         st.divider()
 
         unique_dates = sorted(df['날짜'].unique().tolist(), reverse=True)
         if 'selected_date_list' not in st.session_state:
-            st.session_state['selected_date_list'] = unique_dates[:5] if len(unique_dates) >= 5 else unique_dates
+            # [수정] 기본값을 전체 날짜로 변경
+            st.session_state['selected_date_list'] = unique_dates 
 
         col1, col2 = st.columns(2)
         if col1.button("모두 선택"):
@@ -383,6 +414,13 @@ with tab1:
         st.caption("선택 시 해당 길드를 상대로 공격한 기록만 보여줍니다.")
 
     filtered_df = df.copy()
+    
+    # [추가] 데이터 기준 필터링
+    if view_type == "공격":
+        filtered_df = filtered_df[filtered_df['기준'] == '공격']
+    elif view_type == "방어":
+        filtered_df = filtered_df[filtered_df['기준'] == '방어']
+        
     if search_query:
         query_terms = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
         if query_terms:
@@ -519,6 +557,7 @@ with tab2:
     
     search_query_guide = st.text_input("🛡️ 상대 방덱 검색", placeholder="예: 카구라, 오공 (비워두면 전체 보기)")
     
+    # [수정] 정규화된 DB의 키를 사용하여 필터링
     all_enemies = list(MATCHUP_DB.keys())
     target_enemies = []
     
@@ -551,6 +590,34 @@ with tab2:
                     st.markdown(clean_html(html_content), unsafe_allow_html=True)
             
             st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+
+# =========================================================
+# TAB 3: 공지사항 (Notice) - [추가됨]
+# =========================================================
+with tab3:
+    st.header("📢 공지사항")
+    st.caption("업데이트 내역 및 중요 공지사항입니다.")
+    
+    # 공지사항 카드 생성 함수
+    def notice_card(date, content):
+        st.markdown(f"""
+        <div class="notice-card">
+            <div class="notice-date">📅 {date}</div>
+            <div class="notice-content">{content}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 여기에 최신 공지사항을 위에 작성하세요
+    notice_card("2024-05-20", """
+    - <b>매치업 상세 가이드(Tab 2)</b> 기능이 강화되었습니다.<br>
+    - 공격 덱 추천에서 <b>'📖 공략 있음'</b> 팝업 기능을 추가했습니다.<br>
+    - 날짜 필터 기본값이 <b>'모두 선택'</b>으로 변경되었습니다.
+    """)
+
+    notice_card("2024-05-15", """
+    - <b>서비스 오픈!</b> 판다 길드전 공격 추천 시스템이 가동됩니다.<br>
+    - 엑셀 데이터를 기반으로 승률 높은 덱을 추천해 드립니다.
+    """)
 
 # Footer
 st.markdown("""
