@@ -118,6 +118,30 @@ st.markdown("""
         color: #475569;
         word-break: break-word; /* 긴 내용 줄바꿈 */
     }
+    
+    /* 공지사항 스타일 */
+    .notice-card {
+        background-color: #fff;
+        border-left: 4px solid #3b82f6;
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 15px;
+    }
+    .notice-date {
+        font-size: 0.85rem;
+        color: #64748b;
+        font-weight: 600;
+        margin-bottom: 5px;
+    }
+    .notice-content {
+        color: #334155;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    .notice-content li {
+        margin-bottom: 4px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -554,8 +578,8 @@ with tab2:
         st.info("검색 결과가 없습니다.")
     else:
         for enemy_name in target_enemies:
-            # [수정] 방어덱 별로 Expander 그룹화
-            with st.expander(f"🛡️ VS {enemy_name}", expanded=True):
+            # [수정] 방어덱 별로 Expander 그룹화, 기본은 접힘(expanded=False)으로 변경
+            with st.expander(f"🛡️ VS {enemy_name}", expanded=False):
                 my_decks_map = MATCHUP_DB[enemy_name]
                 
                 # 공격덱이 여러 개일 경우 탭으로 분리, 하나면 바로 표시
@@ -577,15 +601,13 @@ with tab2:
 # TAB 3: 안내 및 소식 (Notice) - [수정됨]
 # =========================================================
 with tab3:
-    st.header("📢 안내 센터")
+    # 헤더 삭제 (이전 st.header("📢 안내 센터") 제거됨)
     
     # [수정] 탭 분리: 사이트 사용법 / 공지사항
     help_tab, notice_tab = st.tabs(["📘 사이트 사용법", "📢 공지사항"])
     
     # 1. 사이트 사용법 탭
     with help_tab:
-        st.markdown("#### 👋 환영합니다! 이렇게 사용해보세요.")
-        
         with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=True):
             st.markdown("""
             - 왼쪽 사이드바의 **'상대 캐릭터 검색'** 창에 캐릭터 이름을 입력하세요.
