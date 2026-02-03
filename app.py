@@ -608,6 +608,8 @@ with tab3:
     
     # 1. 사이트 사용법 탭
     with help_tab:
+        st.markdown("#### 👋 환영합니다! 이렇게 사용해보세요.")
+        
         with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=True):
             st.markdown("""
             - 왼쪽 사이드바의 **'상대 캐릭터 검색'** 창에 캐릭터 이름을 입력하세요.
@@ -625,9 +627,27 @@ with tab3:
         with st.expander("📖 **상세한 덱 세팅과 운영법이 궁금해요**"):
             st.markdown("""
             - **'매치업 상세 가이드' 탭**으로 이동해 보세요.
-            - 특정 방덱을 상대로 어떤 장비, 펫, 스킬 순서를 써야 하는지 자세히 적혀 있습니다.
+            - 길드전 사용 빈도가 높은 방어덱을 상대로 어떤 조합, 장비, 펫, 스킬 순서를 써야 하는지 자세히 적혀 있습니다.
             - '공격 덱 추천' 탭에서도 **'📖 공략 있음'** 배지가 있는 경우, 버튼을 눌러 바로 가이드를 볼 수 있습니다.
-            """)
+            
+            <div style="margin-top: 10px; padding: 12px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <div style="font-weight: bold; color: #334155; margin-bottom: 5px;">🧩 세팅 난이도 가이드</div>
+                <ul style="list-style-type: none; padding-left: 0; margin: 0; font-size: 0.9rem; color: #475569;">
+                    <li style="margin-bottom: 5px;">
+                        <span style="background-color: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 1~2개</span>
+                        쉬운 세팅
+                    </li>
+                    <li style="margin-bottom: 5px;">
+                        <span style="background-color: #fef9c3; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 3개</span>
+                        까다롭거나 필요한 전용 장비가 있는 세팅
+                    </li>
+                    <li>
+                        <span style="background-color: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 4~5개</span>
+                        세팅이 까다롭고, 확실히 하지 않으면 승률이 낮을 수 있음
+                    </li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
 
     # 2. 공지사항 탭
     with notice_tab:
