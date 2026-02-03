@@ -391,8 +391,8 @@ with tab1:
     with st.sidebar:
         st.header("🔍 필터 옵션")
         
-        # [추가] 공격/방어/전체 보기 필터
-        view_type = st.radio("데이터 기준", ["전체", "공격", "방어"], horizontal=True)
+        # [수정] 공격/방어/전체 보기 필터 (설명 추가)
+        view_type = st.radio("데이터 기준", ["전체", "공격 (우리가 공격)", "방어 (상대가 공격)"], horizontal=True)
         st.divider()
         
         search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공")
@@ -421,10 +421,10 @@ with tab1:
 
     filtered_df = df.copy()
     
-    # [추가] 데이터 기준 필터링
-    if view_type == "공격":
+    # [수정] 데이터 기준 필터링 (라디오 버튼 값에 따라 처리)
+    if "공격" in view_type and view_type != "전체":
         filtered_df = filtered_df[filtered_df['기준'] == '공격']
-    elif view_type == "방어":
+    elif "방어" in view_type and view_type != "전체":
         filtered_df = filtered_df[filtered_df['기준'] == '방어']
         
     if search_query:
@@ -622,7 +622,7 @@ with tab3:
             > **⚠️ 주의사항** > 제공되는 정보는 통계 데이터입니다. 상대의 세부 스펙에 따라 결과가 다를 수 있으니, 익숙하지 않은 조합은 반드시 **연습 모드**를 활용해 보세요.
             """)
 
-        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=True):
+        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**"):
             # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
             st.markdown("""
             <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
