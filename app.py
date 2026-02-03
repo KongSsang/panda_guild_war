@@ -382,7 +382,7 @@ if df is None:
 
 # --- 탭 구성 ---
 # [수정] 공지사항 탭 추가
-tab1, tab2, tab3 = st.tabs(["⚔️ 공격 덱 추천", "📖 매치업 상세 가이드", "📢 안내 및 소식"])
+tab1, tab2, tab3 = st.tabs(["⚔️ 공격 덱 추천", "📖 매치업 상세 가이드", "📢 공지사항"])
 
 # =========================================================
 # TAB 1: 공격 추천
@@ -391,7 +391,7 @@ with tab1:
     with st.sidebar:
         st.header("🔍 필터 옵션")
         
-        # [추가] 공격/방어/전체 보기 필터
+        # [수정] 다시 단순하게 변경
         view_type = st.radio("데이터 기준", ["전체", "공격", "방어"], horizontal=True)
         st.divider()
         
@@ -417,7 +417,6 @@ with tab1:
 
         unique_guilds = sorted([g for g in df['상대 길드'].unique().tolist() if g])
         selected_guilds = st.multiselect("🏰 상대 길드 선택", unique_guilds)
-        st.caption("선택 시 해당 길드를 상대로 공격한 기록만 보여줍니다.")
 
     filtered_df = df.copy()
     
@@ -436,7 +435,6 @@ with tab1:
         filtered_df = filtered_df[filtered_df['날짜'].isin(selected_dates)]
     if selected_guilds:
         filtered_df = filtered_df[filtered_df['상대 길드'].isin(selected_guilds)]
-        filtered_df = filtered_df[filtered_df['기준'] == '공격']
 
     if filtered_df.empty:
         st.info("검색 결과가 없습니다.")
@@ -622,7 +620,7 @@ with tab3:
             > **⚠️ 주의사항** > 제공되는 정보는 통계 데이터입니다. 상대의 세부 스펙에 따라 결과가 다를 수 있으니, 익숙하지 않은 조합은 반드시 **연습 모드**를 활용해 보세요.
             """)
 
-        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**"):
+        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=True):
             # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
             st.markdown("""
             <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
@@ -687,4 +685,3 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
-
