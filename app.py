@@ -12,13 +12,19 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------
-# [데이터 로드] matchup_data.py 파일에서 덱 정보 불러오기
+# [데이터 로드] 외부 데이터 파일 불러오기
 # ---------------------------------------------------------
+# 1. 매치업 데이터 로드
 try:
     from matchup_data import MATCHUP_DB
 except ImportError:
-    # 파일이 없을 경우 빈 딕셔너리로 초기화하여 에러 방지
     MATCHUP_DB = {}
+
+# 2. 공지사항 데이터 로드
+try:
+    from notice_data import NOTICE_DB
+except ImportError:
+    NOTICE_DB = []
 
 # ---------------------------------------------------------
 # CSS 스타일
@@ -76,7 +82,7 @@ st.markdown("""
     
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
     
-    /* [수정] 버튼 스타일: font-weight를 700(Bold)으로 설정 */
+    /* 버튼 스타일: font-weight를 700(Bold)으로 설정 */
     .stButton > button { 
         width: 100%; 
         font-weight: 700 !important; 
@@ -595,7 +601,7 @@ with tab2:
 # TAB 3: 공지사항 (Notice) - [추가됨]
 # =========================================================
 with tab3:
-    st.header("📢 공지사항")
+    st.header("📢 Notice")
     st.caption("업데이트 내역 및 중요 공지사항입니다.")
     
     # 공지사항 카드 생성 함수
@@ -607,17 +613,12 @@ with tab3:
         </div>
         """, unsafe_allow_html=True)
 
-    # 여기에 최신 공지사항을 위에 작성하세요
-    notice_card("2024-05-20", """
-    - <b>매치업 상세 가이드(Tab 2)</b> 기능이 강화되었습니다.<br>
-    - 공격 덱 추천에서 <b>'📖 공략 있음'</b> 팝업 기능을 추가했습니다.<br>
-    - 날짜 필터 기본값이 <b>'모두 선택'</b>으로 변경되었습니다.
-    """)
-
-    notice_card("2024-05-15", """
-    - <b>서비스 오픈!</b> 판다 길드전 공격 추천 시스템이 가동됩니다.<br>
-    - 엑셀 데이터를 기반으로 승률 높은 덱을 추천해 드립니다.
-    """)
+    # [수정] notice_data.py에서 데이터 불러오기
+    if NOTICE_DB:
+        for notice in NOTICE_DB:
+            notice_card(notice['date'], notice['content'])
+    else:
+        st.info("등록된 공지사항이 없습니다.")
 
 # Footer
 st.markdown("""
