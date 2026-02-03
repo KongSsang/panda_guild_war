@@ -622,25 +622,34 @@ with tab3:
             > **⚠️ 주의사항** > 제공되는 정보는 통계 데이터입니다. 상대의 세부 스펙에 따라 결과가 다를 수 있으니, 익숙하지 않은 조합은 반드시 **연습 모드**를 활용해 보세요.
             """)
 
-        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**"):
-            # [수정] 들여쓰기 제거
-            st.markdown("""- 왼쪽 사이드바의 **'상대 캐릭터 검색'** 창에 캐릭터 이름을 입력하세요.
-- 예: `오공`, `카구라` 등 핵심 영웅 이름을 입력하면 관련 방덱만 필터링됩니다.
-- 콤마(,)나 공백으로 구분하여 여러 명을 동시에 검색할 수도 있습니다.""")
+        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=True):
+            # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
+            st.markdown("""
+            <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
+                <li>왼쪽 사이드바의 <b>'상대 캐릭터 검색'</b> 창에 캐릭터 이름을 입력하세요.</li>
+                <li>예: 오공, 카구라 등 핵심 영웅 이름을 입력하면 관련 방덱만 필터링됩니다.</li>
+                <li>콤마(,)나 공백으로 구분하여 여러 명을 동시에 검색할 수도 있습니다.</li>
+            </ul>
+            """, unsafe_allow_html=True)
             
         with st.expander("⚔️ **어떤 공격덱이 좋은지 모르겠어요**"):
-            # [수정] 들여쓰기 제거
-            st.markdown("""- **'공격 덱 추천' 탭**에서 데이터를 확인하세요.
-- 가장 많이 사용된 공격덱이 상단에 표시됩니다.
-- **'픽률'**이 높고 **'표본(데이터 수)'**이 많은 덱을 사용하는 것을 추천합니다.""")
+            # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
+            st.markdown("""
+            <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
+                <li><b>'공격 덱 추천' 탭</b>에서 데이터를 확인하세요.</li>
+                <li>가장 많이 사용된 공격덱이 상단에 표시됩니다.</li>
+                <li><b>'픽률'</b>이 높고 <b>'표본(데이터 수)'</b>이 많은 덱을 사용하는 것을 추천합니다.</li>
+            </ul>
+            """, unsafe_allow_html=True)
             
         with st.expander("📖 **상세한 덱 세팅과 운영법이 궁금해요**"):
-            # [수정] 들여쓰기 제거
-            st.markdown("""- **'매치업 상세 가이드' 탭**으로 이동해 보세요.
-- 길드전 사용 빈도가 높은 방어덱을 상대로 어떤 조합, 장비, 펫, 스킬 순서를 써야 하는지 자세히 적혀 있습니다.
-- '공격 덱 추천' 탭에서도 **'📖 공략 있음'** 배지가 있는 경우, 버튼을 눌러 바로 가이드를 볼 수 있습니다.""")
-            
+            # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
             st.markdown("""
+            <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
+                <li><b>'매치업 상세 가이드' 탭</b>으로 이동해 보세요.</li>
+                <li>길드전 사용 빈도가 높은 방어덱을 상대로 어떤 조합, 장비, 펫, 스킬 순서를 써야 하는지 자세히 적혀 있습니다.</li>
+                <li>'공격 덱 추천' 탭에서도 <b>'📖 공략 있음'</b> 배지가 있는 경우, 버튼을 눌러 바로 가이드를 볼 수 있습니다.</li>
+            </ul>
             <div style="margin-top: 10px; padding: 12px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
                 <div style="font-weight: bold; color: #334155; margin-bottom: 5px;">🧩 세팅 난이도 가이드</div>
                 <ul style="list-style-type: none; padding-left: 0; margin: 0; font-size: 0.9rem; color: #475569;">
@@ -678,4 +687,3 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
-
