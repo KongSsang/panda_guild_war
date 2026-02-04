@@ -620,7 +620,7 @@ with tab3:
             > **⚠️ 주의사항** > 제공되는 정보는 통계 데이터입니다. 상대의 세부 스펙에 따라 결과가 다를 수 있으니, 익숙하지 않은 조합은 반드시 **연습 모드**를 활용해 보세요.
             """)
 
-        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=True):
+        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**"):
             # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
             st.markdown("""
             <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
@@ -685,4 +685,5 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
 
