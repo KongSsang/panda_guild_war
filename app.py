@@ -653,7 +653,7 @@ with tab3:
                 <ul style="list-style-type: none; padding-left: 0; margin: 0; font-size: 0.9rem; color: #475569;">
                     <li style="margin-bottom: 5px;">
                         <span style="background-color: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 1~2개</span>
-                        쉬운 세팅
+                        쉬우면서 승률이 높은 세팅
                     </li>
                     <li style="margin-bottom: 5px;">
                         <span style="background-color: #fef9c3; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 3개</span>
@@ -685,6 +685,7 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
 
 
 
