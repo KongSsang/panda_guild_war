@@ -657,7 +657,7 @@ with tab3:
                     </li>
                     <li style="margin-bottom: 5px;">
                         <span style="background-color: #fef9c3; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 3개</span>
-                        까다롭거나 필요한 전용 장비가 있는 세팅
+                        장비 세팅이 까다롭거나 전반 요구도가 있는 세팅
                     </li>
                     <li>
                         <span style="background-color: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 4~5개</span>
@@ -685,6 +685,7 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
 
 
 
