@@ -159,7 +159,6 @@ def normalize_team_str(team_str):
     return ", ".join(parts)
 
 # [데이터 전처리] MATCHUP_DB 키 정규화
-# 사용자가 "오공 겔리두스"라고 입력했어도 "겔리두스, 오공"으로 변환하여 매칭 확률을 높입니다.
 if MATCHUP_DB:
     NORMALIZED_DB = {}
     for enemy, my_decks in MATCHUP_DB.items():
@@ -381,7 +380,6 @@ if df is None:
     st.stop()
 
 # --- 탭 구성 ---
-# [수정] 공지사항 탭 추가
 tab1, tab2, tab3 = st.tabs(["⚔️ 공격 덱 추천", "📖 매치업 상세 가이드", "📢 안내 및 소식"])
 
 # =========================================================
@@ -391,8 +389,8 @@ with tab1:
     with st.sidebar:
         st.header("🔍 필터 옵션")
         
-        # [수정] 다시 단순하게 변경
-        view_type = st.radio("데이터 기준", ["전체", "공격", "방어"], horizontal=True)
+        # [수정] 공격/방어/전체 보기 필터 (설명 추가)
+        view_type = st.radio("데이터 기준", ["전체", "공격 (우리가 공격)", "방어 (상대가 공격)"], horizontal=True)
         st.divider()
         
         search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공")
@@ -417,13 +415,28 @@ with tab1:
 
         unique_guilds = sorted([g for g in df['상대 길드'].unique().tolist() if g])
         selected_guilds = st.multiselect("🏰 상대 길드 선택", unique_guilds)
+        
+        st.divider()
+
+        # [NEW] 영웅 제외 필터 (Tab 1 Sidebar)
+        all_atk_heroes = set()
+        if not df.empty:
+            # 공격팀 데이터에서 영웅 추출
+            for team in df['공격팀_정렬'].dropna():
+                heroes = [h.strip() for h in team.split(',')]
+                all_atk_heroes.update(heroes)
+        unique_heroes = sorted(list(all_atk_heroes))
+        
+        excluded_heroes = st.multiselect("🚫 사용한 영웅 제외", unique_heroes, placeholder="이미 사용한 영웅을 선택하세요")
+        if excluded_heroes:
+            st.caption(f"선택한 영웅({len(excluded_heroes)}명)이 포함된 공격 덱은 제외됩니다.")
 
     filtered_df = df.copy()
     
-    # [추가] 데이터 기준 필터링
-    if view_type == "공격":
+    # [수정] 데이터 기준 필터링 (라디오 버튼 값에 따라 처리)
+    if "공격" in view_type and view_type != "전체":
         filtered_df = filtered_df[filtered_df['기준'] == '공격']
-    elif view_type == "방어":
+    elif "방어" in view_type and view_type != "전체":
         filtered_df = filtered_df[filtered_df['기준'] == '방어']
         
     if search_query:
@@ -435,6 +448,17 @@ with tab1:
         filtered_df = filtered_df[filtered_df['날짜'].isin(selected_dates)]
     if selected_guilds:
         filtered_df = filtered_df[filtered_df['상대 길드'].isin(selected_guilds)]
+    
+    # [NEW] 영웅 제외 필터 적용
+    if excluded_heroes:
+        # 공격팀에 제외 영웅이 하나라도 포함되어 있으면 False 반환 (제외)
+        def is_available(team_str, excluded_set):
+            team_members = set([h.strip() for h in team_str.split(',')])
+            return team_members.isdisjoint(excluded_set)
+            
+        excluded_set = set(excluded_heroes)
+        mask = filtered_df['공격팀_정렬'].apply(lambda x: is_available(x, excluded_set))
+        filtered_df = filtered_df[mask]
 
     if filtered_df.empty:
         st.info("검색 결과가 없습니다.")
@@ -620,7 +644,7 @@ with tab3:
             > **⚠️ 주의사항** > 제공되는 정보는 통계 데이터입니다. 상대의 세부 스펙에 따라 결과가 다를 수 있으니, 익숙하지 않은 조합은 반드시 **연습 모드**를 활용해 보세요.
             """)
 
-        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=False):
+        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=True):
             # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
             st.markdown("""
             <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
@@ -630,7 +654,7 @@ with tab3:
             </ul>
             """, unsafe_allow_html=True)
             
-        with st.expander("⚔️ **어떤 공격덱이 좋은지 모르겠어요**", expanded=False):
+        with st.expander("⚔️ **어떤 공격덱이 좋은지 모르겠어요**"):
             # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
             st.markdown("""
             <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
@@ -640,7 +664,7 @@ with tab3:
             </ul>
             """, unsafe_allow_html=True)
             
-        with st.expander("📖 **상세한 덱 세팅과 운영법이 궁금해요**", expanded=False):
+        with st.expander("📖 **상세한 덱 세팅과 운영법이 궁금해요**"):
             # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
             st.markdown("""
             <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
@@ -653,11 +677,11 @@ with tab3:
                 <ul style="list-style-type: none; padding-left: 0; margin: 0; font-size: 0.9rem; color: #475569;">
                     <li style="margin-bottom: 5px;">
                         <span style="background-color: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 1~2개</span>
-                        쉬우면서 승률이 높은 세팅
+                        쉬운 세팅
                     </li>
                     <li style="margin-bottom: 5px;">
                         <span style="background-color: #fef9c3; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 3개</span>
-                        장비 세팅이 까다롭거나 전반 요구도가 있는 세팅
+                        까다롭거나 필요한 전용 장비가 있는 세팅
                     </li>
                     <li>
                         <span style="background-color: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 4~5개</span>
@@ -685,8 +709,3 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
-
-
-
-
-
