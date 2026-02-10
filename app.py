@@ -644,7 +644,7 @@ with tab3:
             > **⚠️ 주의사항** > 제공되는 정보는 통계 데이터입니다. 상대의 세부 스펙에 따라 결과가 다를 수 있으니, 익숙하지 않은 조합은 반드시 **연습 모드**를 활용해 보세요.
             """)
 
-        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=True):
+        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=False):
             # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
             st.markdown("""
             <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
@@ -677,11 +677,11 @@ with tab3:
                 <ul style="list-style-type: none; padding-left: 0; margin: 0; font-size: 0.9rem; color: #475569;">
                     <li style="margin-bottom: 5px;">
                         <span style="background-color: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 1~2개</span>
-                        쉬운 세팅
+                        쉬우면서 승률이 높은 세팅
                     </li>
                     <li style="margin-bottom: 5px;">
                         <span style="background-color: #fef9c3; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 3개</span>
-                        까다롭거나 필요한 전용 장비가 있는 세팅
+                        장비 세팅이 까다롭거나 전반 요구도가 있는 세팅
                     </li>
                     <li>
                         <span style="background-color: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-size: 0.8rem;">★ 4~5개</span>
@@ -709,3 +709,4 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
