@@ -350,7 +350,7 @@ def show_guide_popup(enemy_name, my_deck_name, guide):
 
 # [추가] AI 데이터 요약 함수 (RAG Context 생성용)
 def get_ai_context(df, matchup_db):
-    context = "다음은 세븐나이츠 키우기 길드전 데이터 요약입니다.\n\n"
+    context = "다음은 세븐나이츠 리버스 길드전 데이터 요약입니다.\n\n"
     
     # 1. 수동 공략 (Matchup DB)
     if matchup_db:
@@ -595,6 +595,7 @@ with tab2:
 # =========================================================
 with tab3:
     st.header("🤖 AI 전략가 (Beta)")
+    st.caption("판다 길드전 데이터를 학습한 AI에게 질문해보세요! (Google Gemini 연동 필요)")
 
     if not HAS_GENAI:
         st.error("⚠️ `google-generativeai` 라이브러리가 설치되지 않았습니다. 관리자에게 문의하세요.")
@@ -626,7 +627,29 @@ with tab3:
         else:
             try:
                 data_context = get_ai_context(df, MATCHUP_DB)
-                model = genai.GenerativeModel('gemini-pro')
+                
+                # [수정] 사용 가능한 모델 동적 탐색 (오류 방지)
+                model_name = 'gemini-1.5-flash' # Default fallback
+                try:
+                    # 지원하는 모델 목록 조회
+                    models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                    # 선호 모델 순위 (최신순)
+                    priority = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro', 'models/gemini-1.0-pro']
+                    
+                    found = False
+                    for p in priority:
+                        if p in models:
+                            model_name = p
+                            found = True
+                            break
+                    
+                    if not found and models:
+                        # 선호 모델이 없으면 리스트의 첫 번째 모델 사용 (가장 안전)
+                        model_name = models[0]
+                except:
+                    pass # 리스트 조회 실패 시 기본값 사용
+
+                model = genai.GenerativeModel(model_name)
                 full_prompt = f"""
                 너는 '세븐나이츠 리버스' 게임의 길드전 전략 전문가야.
                 아래에 제공된 [길드전 데이터]를 바탕으로 사용자의 질문에 답변해줘.
@@ -695,4 +718,3 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
-
