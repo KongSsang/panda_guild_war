@@ -783,4 +783,11 @@ with tab4:
                 with st.expander(f"📅 {notice['date']} 업데이트", expanded=True):
                     st.markdown(notice['content'], unsafe_allow_html=True)
         else:
-            st.info("등록된
+            st.info("등록된 공지사항이 없습니다.")
+
+# Footer
+st.markdown("""
+    <div style='text-align: center; color: #9ca3af; font-size: 0.8rem; margin-top: 50px;'>
+        데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
+    </div>
+""", unsafe_allow_html=True)
