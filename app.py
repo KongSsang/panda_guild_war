@@ -152,32 +152,6 @@ st.markdown("""
         margin-bottom: 4px;
     }
 
-    /* 메타 분석 랭킹 스타일 */
-    .rank-row {
-        display: flex;
-        align-items: center;
-        padding: 10px 0;
-        border-bottom: 1px solid #f1f5f9;
-    }
-    .rank-num {
-        font-size: 1.1rem;
-        font-weight: 800;
-        color: #3b82f6;
-        width: 30px;
-    }
-    .rank-name {
-        flex: 1;
-        font-weight: 600;
-        color: #1e293b;
-    }
-    .rank-value {
-        font-size: 0.9rem;
-        color: #64748b;
-        background-color: #f8fafc;
-        padding: 2px 8px;
-        border-radius: 12px;
-    }
-
     /* 챗봇 스타일 */
     .chat-container {
         border: 1px solid #e2e8f0;
@@ -348,96 +322,90 @@ def show_guide_popup(enemy_name, my_deck_name, guide):
     html_content = generate_guide_html(enemy_name, my_deck_name, guide)
     st.markdown(clean_html(html_content), unsafe_allow_html=True)
 
-# [추가] AI 데이터 요약 함수 (사용자 질문 기반 동적 필터링 + 조합 분석 추가)
+# [수정] AI 데이터 요약 함수 (관련성 점수 기반으로 변경)
 def get_ai_context(df, matchup_db, user_query=""):
-    context = "다음은 세븐나이츠 리버스 길드전 데이터 요약입니다.\n\n"
+    context = "다음은 세븐나이츠 키우기 길드전 데이터 요약입니다.\n\n"
     
-    # 1. 사용자 질문에서 키워드 추출 (조사 제거)
+    # 1. 사용자 질문에서 키워드 추출
     raw_keywords = [k.strip() for k in user_query.replace('?', '').replace('!', '').replace(',', ' ').split()]
+    expanded_keywords = expand_synonyms(raw_keywords) # 브브 <-> 쁘 등 확장
     
-    # 유효한 영웅 키워드 찾기 (동의어 확장 및 실제 데이터 존재 여부 확인)
-    valid_heroes = []
-    if not df.empty:
-        for k in raw_keywords:
-            synonyms = expand_synonyms([k])
-            is_valid = False
-            for syn in synonyms:
-                # 엑셀 방어팀 데이터나 공략 DB 키에 포함되어 있는지 확인
-                if df['방어팀_정렬'].astype(str).str.contains(syn).any():
-                    is_valid = True
-                    valid_heroes.append(syn)
-                    break
-                # 공략 DB 확인
-                for enemy in matchup_db.keys():
-                    if syn in enemy:
-                        is_valid = True
-                        valid_heroes.append(syn)
-                        break
-                if is_valid: break
-    
-    valid_heroes = list(set(valid_heroes)) # 중복 제거
+    if df.empty:
+        return context + "현재 데이터가 없습니다."
 
-    # 2. [핵심] 조합 검색 (추출된 영웅들이 모두 포함된 덱 검색)
-    if len(valid_heroes) >= 2 and not df.empty:
-        # 모든 유효 키워드가 포함된 행 필터링 (AND 조건)
-        combination_mask = pd.Series([True] * len(df))
-        for hero in valid_heroes:
-            combination_mask &= df['방어팀_정렬'].astype(str).str.contains(hero)
+    # 2. 관련성 점수(Relevance Scoring) 계산
+    # 각 행(기록)마다 점수를 매깁니다.
+    # 방어팀에 키워드가 있으면 +2점 (사용자가 '오공 방덱'을 물어봤을 확률이 높으므로)
+    # 공격팀에 키워드가 있으면 +1점 (사용자가 '프레이야 공격'을 물어봤을 수도 있으므로)
+    
+    def calc_score(row):
+        score = 0
+        def_str = str(row['방어팀_정렬'])
+        atk_str = str(row['공격팀_정렬'])
         
-        target_df = df[combination_mask]
+        match_info = []
+        for k in expanded_keywords:
+            if k in def_str:
+                score += 2 # 방어팀 매칭 가중치
+                match_info.append(f"방어[{k}]")
+            if k in atk_str:
+                score += 1 # 공격팀 매칭
+                match_info.append(f"공격[{k}]")
+        return score
+
+    # 데이터프레임 복사 후 점수 계산 (성능을 위해 상위 1000개만 하거나 전체 수행)
+    # 600개 정도면 전체 수행해도 빠릅니다.
+    temp_df = df.copy()
+    temp_df['score'] = temp_df.apply(calc_score, axis=1)
+    
+    # 점수가 0보다 큰 데이터만 필터링하고, 점수 높은 순으로 정렬
+    relevant_df = temp_df[temp_df['score'] > 0].sort_values(by='score', ascending=False)
+    
+    if not relevant_df.empty:
+        count_total = len(relevant_df)
+        context += f"🔍 질문과 관련된 데이터가 총 {count_total}건 발견되었습니다. (관련성 순 정렬)\n"
         
-        if not target_df.empty:
-            count_total = len(target_df)
-            hero_combo_str = ", ".join(valid_heroes)
-            context += f"🔥🔥 [질문한 조합 집중 분석: '{hero_combo_str}' 포함 방덱] (총 {count_total}전 데이터 발견) 🔥🔥\n"
+        # 상위 10개 기록에 대해 구체적인 패턴 분석
+        # 예: "오공(방어) vs 프레이야(공격)" 같은 패턴이 있는지 확인
+        
+        # 1) 가장 많이 발견된 [방어팀 vs 공격팀] 조합 Top 5
+        combo_counts = relevant_df.groupby(['방어팀_정렬', '공격팀_정렬']).size().reset_index(name='count')
+        combo_counts = combo_counts.sort_values('count', ascending=False).head(5)
+        
+        context += "\n🏆 가장 많이 발견된 관련 매치업 (승리/사용 기록):\n"
+        for _, row in combo_counts.iterrows():
+            context += f"- 방어: [{row['방어팀_정렬']}]  vs  공격: [{row['공격팀_정렬']}] (총 {row['count']}회)\n"
             
-            # 가장 많이 승리한 공격덱 Top 3
-            top_atk = target_df['공격팀_정렬'].value_counts().head(3)
-            for atk_name, count in top_atk.items():
-                win_rate_approx = (count / count_total) * 100
-                context += f"- 추천 공덱: {atk_name} (사용 {count}회, 픽률 {win_rate_approx:.1f}%)\n"
-                
-                # 해당 공격덱의 상세 세팅 (펫, 스킬순서) 중 최빈값 가져오기
-                detail_df = target_df[target_df['공격팀_정렬'] == atk_name]
-                best_pet = detail_df['공격팀 펫'].mode()[0] if not detail_df['공격팀 펫'].empty else "정보없음"
-                best_skill = detail_df['공격팀 스순'].mode()[0] if not detail_df['공격팀 스순'].empty else "정보없음"
-                context += f"  > 상세 세팅: 펫[{best_pet}], 스킬순서[{best_skill}]\n"
-            context += "\n"
-
-    # 3. 개별 영웅 통계 및 전체 통계 (보조 정보)
-    if valid_heroes:
-        context += f"[참고: 각 영웅별 개별 통계]\n"
-        for hero in valid_heroes:
-            mask = df['방어팀_정렬'].astype(str).str.contains(hero)
-            target_df = df[mask]
-            if not target_df.empty:
-                top_atk_name = target_df['공격팀_정렬'].value_counts().idxmax()
-                top_atk_count = target_df['공격팀_정렬'].value_counts().max()
-                context += f"- '{hero}' 포함 방덱 상대로는 '{top_atk_name}'({top_atk_count}회)이 가장 많이 쓰였습니다.\n"
+            # 해당 조합의 상세 세팅 (펫, 스킬) 최빈값
+            detail_mask = (relevant_df['방어팀_정렬'] == row['방어팀_정렬']) & (relevant_df['공격팀_정렬'] == row['공격팀_정렬'])
+            detail_df = relevant_df[detail_mask]
+            
+            best_pet = detail_df['공격팀 펫'].mode()[0] if not detail_df['공격팀 펫'].empty else "정보없음"
+            best_skill = detail_df['공격팀 스순'].mode()[0] if not detail_df['공격팀 스순'].empty else "정보없음"
+            context += f"    > 추천 세팅: 펫-{best_pet}, 스킬-{best_skill}\n"
+            
     else:
-        # 질문과 관련된 특정 영웅이 감지되지 않으면 전체 통계 요약 제공
-        if not df.empty:
-            top_def = df['방어팀_정렬'].value_counts().head(5)
-            context += "\n[전체 통계: 자주 등장하는 방어 덱 Top 5]\n"
-            for k, v in top_def.items():
-                context += f"- {k} (등장 횟수: {v})\n"
+        context += "질문과 관련된 구체적인 덱 데이터(엑셀)를 찾지 못했습니다.\n"
+        # 관련 데이터가 없으면 전체 통계라도 보여줌
+        top_atk = df['공격팀_정렬'].value_counts().head(3)
+        context += "\n[참고: 전체 데이터에서 가장 많이 쓰이는 공격 덱]\n"
+        for k, v in top_atk.items():
+            context += f"- {k} ({v}회)\n"
 
-    # 4. 수동 공략 (Matchup DB) - 관련 있는 것 위주로
+    # 3. 수동 공략 (Matchup DB) 확인
     if matchup_db:
         context += "\n[공략 데이터베이스 (상세 가이드)]\n"
         found_guide = False
         for enemy, guides in matchup_db.items():
-            # 질문과 관련된 방덱이거나, 관련 영웅이 없으면(일반 질문) 포함
-            if any(h in enemy for h in valid_heroes) or (not valid_heroes):
+            # DB 키(방어덱 이름)에 키워드가 포함되어 있는지 확인
+            if check_match(enemy, raw_keywords):
                  context += f"- 상대 방덱: {enemy}\n"
                  for my_deck, info in guides.items():
-                     context += f"  > 추천 공덱: {my_deck}\n"
-                     context += f"    * 핵심 요약: {info.get('summary')}\n"
-                     context += f"    * 운영 팁: {info.get('operate_tips')}\n"
+                     context += f"  > 추천 공덱: {my_deck} (요약: {info.get('summary')})\n"
                  found_guide = True
         
-        if valid_heroes and not found_guide:
-            context += "(이 영웅 조합에 대한 수동 공략 가이드는 DB에 없습니다. 위 엑셀 데이터 분석을 참고하세요.)\n"
+        if not found_guide:
+            context += "(질문과 직접 관련된 수동 공략 가이드는 없습니다.)\n"
 
     return context
 
@@ -694,14 +662,16 @@ with tab3:
              response = "🔒 **API Key가 설정되지 않았습니다.** 관리자에게 문의하세요."
         else:
             try:
-                # [수정] 질문 기반 실시간 데이터 조회 및 컨텍스트 생성
+                # [수정] 질문 기반 실시간 데이터 조회 및 컨텍스트 생성 (Scoring 적용)
                 data_context = get_ai_context(df, MATCHUP_DB, user_query=prompt)
                 
-                # [수정] 모델 설정: Gemini 3 Flash Preview 우선 사용
+                # [수정] 모델 순서 변경: 1.5-flash 우선
                 candidate_models = [
-                    'gemini-3-flash-preview', 
+                    'gemini-1.5-flash', # RPD 1500 (Priority 1)
+                    'gemini-1.5-pro',
                     'gemini-2.0-flash',
-                    'gemini-1.5-flash'
+                    'gemini-2.5-flash',
+                    'gemini-pro'
                 ]
                 
                 response_text = ""
@@ -715,9 +685,10 @@ with tab3:
                         아래 제공된 [길드전 데이터]를 바탕으로 사용자의 질문에 답변해줘.
                         
                         [답변 원칙]
-                        1. 엑셀 데이터 통계(승리 횟수 등)를 최우선 근거로 제시해줘.
-                        2. 데이터에 명확한 답이 없다면 일반적인 게임 지식을 활용하되 "데이터에는 없지만..." 이라고 언급해줘.
-                        3. 답변은 친절하고 간결하게, 핵심 위주로 해줘.
+                        1. **분석된 데이터** (방어팀/공격팀 매칭 횟수)를 최우선 근거로 제시해줘.
+                        2. 사용자가 특정 조합(예: A 상대로 B를 씀)을 물어봤다면, 해당 조합이 데이터에 있는지 확인하고 승리 횟수나 픽률을 알려줘.
+                        3. 데이터가 없다면 "데이터에는 해당 기록이 없습니다"라고 솔직히 말하고, 일반적인 상성 지식을 활용해 조언해줘.
+                        4. 답변은 친절하고 간결하게, 핵심 위주로 해줘.
 
                         [길드전 데이터]
                         {data_context}
