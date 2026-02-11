@@ -667,7 +667,7 @@ with tab3:
                 
                 # [수정] 모델 순서 변경: 1.5-flash 우선
                 candidate_models = [
-                    'gemini-3.0-flash', # RPD 1500 (Priority 1)
+                    'gemini-3.0-flash-preview', # RPD 1500 (Priority 1)
                     'gemini-1.5-pro',
                     'gemini-2.0-flash',
                     'gemini-2.5-flash',
@@ -762,4 +762,5 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
 
