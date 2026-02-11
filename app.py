@@ -348,7 +348,7 @@ def show_guide_popup(enemy_name, my_deck_name, guide):
     html_content = generate_guide_html(enemy_name, my_deck_name, guide)
     st.markdown(clean_html(html_content), unsafe_allow_html=True)
 
-# [수정] AI 데이터 요약 함수 (사용자 질문 기반 동적 필터링 + 조합 분석 추가)
+# [추가] AI 데이터 요약 함수 (사용자 질문 기반 동적 필터링 + 조합 분석 추가)
 def get_ai_context(df, matchup_db, user_query=""):
     context = "다음은 세븐나이츠 리버스 길드전 데이터 요약입니다.\n\n"
     
@@ -697,17 +697,13 @@ with tab3:
                 # [수정] 질문 기반 실시간 데이터 조회 및 컨텍스트 생성
                 data_context = get_ai_context(df, MATCHUP_DB, user_query=prompt)
                 
-                # [수정] 모델 순서 변경: 2.5/2.0/3.0 포함 최신순
-                candidate_models ='gemini-3-flash-preview'
+                # [수정] 모델 설정: Gemini 3 Flash Preview 우선 사용
+                candidate_models = [
+                    'gemini-3-flash-preview', 
+                    'gemini-2.0-flash',
+                    'gemini-1.5-flash'
+                ]
                 
-                # Dynamic check for available models first
-                try:
-                    available_models = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-                    # Filter candidate_models to keep only available ones, preserving preference order
-                    candidate_models = [m for m in candidate_models if m in available_models] + [m for m in candidate_models if m not in available_models] # Just try prioritized ones first
-                except:
-                    pass 
-
                 response_text = ""
                 error_msg = ""
                 
@@ -795,4 +791,3 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
-
