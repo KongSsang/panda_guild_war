@@ -698,14 +698,7 @@ with tab3:
                 data_context = get_ai_context(df, MATCHUP_DB, user_query=prompt)
                 
                 # [수정] 모델 순서 변경: 2.5/2.0/3.0 포함 최신순
-                candidate_models = [
-                    'gemini-3-flash-preview',
-                    'gemini-2.5-flash',
-                    'gemini-2.0-flash',
-                    'gemini-1.5-flash',
-                    'gemini-1.5-pro',
-                    'gemini-pro'
-                ]
+                candidate_models ='gemini-3-flash-preview'
                 
                 # Dynamic check for available models first
                 try:
@@ -802,3 +795,4 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
