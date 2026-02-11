@@ -664,7 +664,6 @@ with tab2:
 # =========================================================
 with tab3:
     st.header("🤖 AI 전략가 (Beta)")
-    st.caption("판다 길드전 데이터를 학습한 AI에게 질문해보세요! (Google Gemini 연동 필요)")
 
     if not HAS_GENAI:
         st.error("⚠️ `google-generativeai` 라이브러리가 설치되지 않았습니다. 관리자에게 문의하세요.")
@@ -698,39 +697,57 @@ with tab3:
                 # [수정] 질문 기반 실시간 데이터 조회 및 컨텍스트 생성
                 data_context = get_ai_context(df, MATCHUP_DB, user_query=prompt)
                 
-                # [수정] 사용 가능한 모델 동적 탐색 (오류 방지)
-                model_name = 'gemini-2.5-flash-tts' # Default
-                try:
-                    models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-                    priority = ['models/gemini-pro', 'models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-1.0-pro']
-                    
-                    found = False
-                    for p in priority:
-                        if p in models:
-                            model_name = p
-                            found = True
-                            break
-                    if not found and models: model_name = models[0]
-                except: pass
-
-                model = genai.GenerativeModel(model_name)
-                full_prompt = f"""
-                너는 '세븐나이츠 리버스' 게임의 길드전 전략 전문가야.
-                아래 제공된 [길드전 데이터]를 바탕으로 사용자의 질문에 답변해줘.
+                # [수정] 모델 순서 변경: 2.5/2.0/3.0 포함 최신순
+                candidate_models = [
+                    'gemini-3-flash-preview',
+                    'gemini-2.5-flash',
+                    'gemini-2.0-flash',
+                    'gemini-1.5-flash',
+                    'gemini-1.5-pro',
+                    'gemini-pro'
+                ]
                 
-                [답변 원칙]
-                1. 엑셀 데이터 통계(승리 횟수 등)를 최우선 근거로 제시해줘.
-                2. 데이터에 명확한 답이 없다면 일반적인 게임 지식을 활용하되 "데이터에는 없지만..." 이라고 언급해줘.
-                3. 답변은 친절하고 간결하게, 핵심 위주로 해줘.
+                # Dynamic check for available models first
+                try:
+                    available_models = [m.name.replace('models/', '') for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                    # Filter candidate_models to keep only available ones, preserving preference order
+                    candidate_models = [m for m in candidate_models if m in available_models] + [m for m in candidate_models if m not in available_models] # Just try prioritized ones first
+                except:
+                    pass 
 
-                [길드전 데이터]
-                {data_context}
+                response_text = ""
+                error_msg = ""
+                
+                for model_name in candidate_models:
+                    try:
+                        model = genai.GenerativeModel(model_name)
+                        full_prompt = f"""
+                        너는 '세븐나이츠 리버스' 게임의 길드전 전략 전문가야.
+                        아래 제공된 [길드전 데이터]를 바탕으로 사용자의 질문에 답변해줘.
+                        
+                        [답변 원칙]
+                        1. 엑셀 데이터 통계(승리 횟수 등)를 최우선 근거로 제시해줘.
+                        2. 데이터에 명확한 답이 없다면 일반적인 게임 지식을 활용하되 "데이터에는 없지만..." 이라고 언급해줘.
+                        3. 답변은 친절하고 간결하게, 핵심 위주로 해줘.
 
-                사용자 질문: {prompt}
-                """
-                with st.spinner("AI가 데이터를 분석 중입니다..."):
-                    ai_response = model.generate_content(full_prompt)
-                    response = ai_response.text
+                        [길드전 데이터]
+                        {data_context}
+
+                        사용자 질문: {prompt}
+                        """
+                        with st.spinner(f"AI({model_name})가 데이터를 분석 중입니다..."):
+                            ai_response = model.generate_content(full_prompt)
+                            response_text = ai_response.text
+                            break # 성공하면 루프 중단
+                    except Exception as e:
+                        error_msg = str(e)
+                        continue # 실패하면 다음 모델 시도
+                
+                if response_text:
+                    response = response_text
+                else:
+                    response = f"🚫 모든 AI 모델 연결 실패. (Last Error: {error_msg})"
+
             except Exception as e:
                 response = f"🚫 오류가 발생했습니다: {str(e)}"
 
