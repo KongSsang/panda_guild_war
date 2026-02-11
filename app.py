@@ -348,24 +348,76 @@ def show_guide_popup(enemy_name, my_deck_name, guide):
     html_content = generate_guide_html(enemy_name, my_deck_name, guide)
     st.markdown(clean_html(html_content), unsafe_allow_html=True)
 
-# [추가] AI 데이터 요약 함수 (RAG Context 생성용)
-def get_ai_context(df, matchup_db):
+# [수정] AI 데이터 요약 함수 (사용자 질문 기반 동적 필터링 추가)
+def get_ai_context(df, matchup_db, user_query=""):
     context = "다음은 세븐나이츠 리버스 길드전 데이터 요약입니다.\n\n"
     
-    # 1. 수동 공략 (Matchup DB)
-    if matchup_db:
-        context += "[공략 데이터베이스]\n"
-        for enemy, guides in matchup_db.items():
-            context += f"- 상대: {enemy}\n"
-            for my_deck, info in guides.items():
-                context += f"  > 추천: {my_deck} (요약: {info.get('summary')})\n"
-                
-    # 2. 통계 데이터 (Top 5)
+    # 1. 사용자 질문에서 키워드 추출
+    keywords = [k.strip() for k in user_query.replace('?', '').replace('!', '').split()]
+    related_heroes = []
+    
     if not df.empty:
-        top_atk = df['공격팀_정렬'].value_counts().head(5).to_dict()
-        context += "\n[통계: 많이 쓰이는 공격 덱]\n"
-        for k, v in top_atk.items():
-            context += f"- {k}: {v}회 사용\n"
+        # 질문에 포함된 영웅 이름 찾기 (부분 일치)
+        # 데이터프레임의 모든 텍스트를 하나의 문자열로 합쳐서 검색하면 느릴 수 있으니,
+        # 주요 컬럼(방어팀_정렬)에서 검색
+        for k in keywords:
+            # 간단한 검색: 키워드가 방어팀 문자열에 포함되는지 확인
+            if df['방어팀_정렬'].astype(str).str.contains(k).any():
+                related_heroes.append(k)
+
+    # 2. 관련 데이터 통계 추출
+    if related_heroes:
+        context += f"[질문 관련 엑셀 데이터 분석: '{', '.join(related_heroes)}' 포함 방덱 상대]\n"
+        for hero in related_heroes:
+            # 해당 영웅이 포함된 방덱 필터링
+            mask = df['방어팀_정렬'].astype(str).str.contains(hero)
+            target_df = df[mask]
+            
+            if not target_df.empty:
+                count_total = len(target_df)
+                context += f"\n--- 상대 방덱에 '{hero}' 포함 (총 {count_total}전) ---\n"
+                
+                # 가장 많이 승리한 공격덱 Top 3
+                top_atk = target_df['공격팀_정렬'].value_counts().head(3)
+                context += f"🔥 승리 횟수 상위 공격덱:\n"
+                for atk_name, count in top_atk.items():
+                    win_rate_approx = (count / count_total) * 100 # 대략적인 픽률(승률이라 가정)
+                    context += f"  > {atk_name}: {count}회 사용 (픽률 {win_rate_approx:.1f}%)\n"
+                    
+                    # 해당 공격덱의 상세 세팅 (펫, 스킬순서) 중 최빈값 가져오기
+                    detail_df = target_df[target_df['공격팀_정렬'] == atk_name]
+                    best_pet = detail_df['공격팀 펫'].mode()[0] if not detail_df['공격팀 펫'].empty else "정보없음"
+                    best_skill = detail_df['공격팀 스순'].mode()[0] if not detail_df['공격팀 스순'].empty else "정보없음"
+                    context += f"    (추천 세팅: 펫-{best_pet}, 스킬-{best_skill})\n"
+    else:
+        # 질문과 관련된 특정 영웅이 감지되지 않으면 전체 통계 요약 제공
+        if not df.empty:
+            top_def = df['방어팀_정렬'].value_counts().head(5)
+            context += "\n[전체 통계: 자주 등장하는 방어 덱 Top 5]\n"
+            for k, v in top_def.items():
+                context += f"- {k} (등장 횟수: {v})\n"
+                
+            top_atk = df['공격팀_정렬'].value_counts().head(5)
+            context += "\n[전체 통계: 자주 사용되는 공격 덱 Top 5]\n"
+            for k, v in top_atk.items():
+                context += f"- {k} (사용 횟수: {v})\n"
+
+    # 3. 수동 공략 (Matchup DB) - 관련 있는 것 위주로
+    if matchup_db:
+        context += "\n[공략 데이터베이스 (상세 가이드)]\n"
+        found_guide = False
+        for enemy, guides in matchup_db.items():
+            # 질문과 관련된 방덱이거나, 관련 영웅이 없으면(일반 질문) 포함
+            if any(h in enemy for h in related_heroes) or (not related_heroes):
+                 context += f"- 상대 방덱: {enemy}\n"
+                 for my_deck, info in guides.items():
+                     context += f"  > 추천 공덱: {my_deck}\n"
+                     context += f"    * 핵심 요약: {info.get('summary')}\n"
+                     context += f"    * 운영 팁: {info.get('operate_tips')}\n"
+                 found_guide = True
+        
+        if related_heroes and not found_guide:
+            context += "(이 영웅에 대한 수동 공략 가이드는 DB에 없습니다. 위 엑셀 데이터를 참고하세요.)\n"
 
     return context
 
@@ -554,7 +606,7 @@ with tab1:
             st.markdown("<div style='margin-bottom: 30px;'></div>", unsafe_allow_html=True)
 
 # =========================================================
-# TAB 2: 매치업 상세 가이드
+# TAB 2: 매치업 상세 가이드 (기존 코드 유지)
 # =========================================================
 with tab2:
     st.header("📖 매치업 상세 가이드")
@@ -566,13 +618,10 @@ with tab2:
     
     if search_query_guide:
         query_terms = [k.strip() for k in search_query_guide.replace(',', ' ').split() if k.strip()]
-        if query_terms:
-            target_enemies = [e for e in all_enemies if check_match(e, query_terms)]
-    else:
-        target_enemies = all_enemies
+        if query_terms: target_enemies = [e for e in all_enemies if check_match(e, query_terms)]
+    else: target_enemies = all_enemies
     
-    if not target_enemies:
-        st.info("검색 결과가 없습니다.")
+    if not target_enemies: st.info("검색 결과가 없습니다.")
     else:
         for enemy_name in target_enemies:
             with st.expander(f"🛡️ VS {enemy_name}", expanded=False):
@@ -626,15 +675,14 @@ with tab3:
              response = "🔒 **API Key가 설정되지 않았습니다.** 관리자에게 문의하세요."
         else:
             try:
-                data_context = get_ai_context(df, MATCHUP_DB)
+                # [수정] 질문 기반 실시간 데이터 조회 및 컨텍스트 생성
+                data_context = get_ai_context(df, MATCHUP_DB, user_query=prompt)
                 
                 # [수정] 사용 가능한 모델 동적 탐색 (오류 방지)
-                model_name = 'gemini-1.5-flash' # Default fallback
+                model_name = 'gemini-1.5-flash' # Default
                 try:
-                    # 지원하는 모델 목록 조회
                     models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-                    # 선호 모델 순위 (최신순)
-                    priority = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro', 'models/gemini-1.0-pro']
+                    priority = ['models/gemini-pro', 'models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-1.0-pro']
                     
                     found = False
                     for p in priority:
@@ -642,19 +690,18 @@ with tab3:
                             model_name = p
                             found = True
                             break
-                    
-                    if not found and models:
-                        # 선호 모델이 없으면 리스트의 첫 번째 모델 사용 (가장 안전)
-                        model_name = models[0]
-                except:
-                    pass # 리스트 조회 실패 시 기본값 사용
+                    if not found and models: model_name = models[0]
+                except: pass
 
                 model = genai.GenerativeModel(model_name)
                 full_prompt = f"""
                 너는 '세븐나이츠 리버스' 게임의 길드전 전략 전문가야.
-                아래에 제공된 [길드전 데이터]를 바탕으로 사용자의 질문에 답변해줘.
-                데이터에 명확한 답이 없다면, 일반적인 게임 지식을 활용하되 "데이터에는 없지만..." 이라고 언급해줘.
-                답변은 친절하고 간결하게, 핵심 위주로 해줘.
+                아래 제공된 [길드전 데이터]를 바탕으로 사용자의 질문에 답변해줘.
+                
+                [답변 원칙]
+                1. 엑셀 데이터 통계(승리 횟수 등)를 최우선 근거로 제시해줘.
+                2. 데이터에 명확한 답이 없다면 일반적인 게임 지식을 활용하되 "데이터에는 없지만..." 이라고 언급해줘.
+                3. 답변은 친절하고 간결하게, 핵심 위주로 해줘.
 
                 [길드전 데이터]
                 {data_context}
