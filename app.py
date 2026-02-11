@@ -626,7 +626,7 @@ with tab3:
         else:
             try:
                 data_context = get_ai_context(df, MATCHUP_DB)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-pro')
                 full_prompt = f"""
                 너는 '세븐나이츠 리버스' 게임의 길드전 전략 전문가야.
                 아래에 제공된 [길드전 데이터]를 바탕으로 사용자의 질문에 답변해줘.
@@ -695,3 +695,4 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
