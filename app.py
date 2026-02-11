@@ -152,7 +152,7 @@ st.markdown("""
         margin-bottom: 4px;
     }
 
-    /* 메타 분석 랭킹 스타일 (삭제된 탭용이지만 유지해도 무방) */
+    /* 메타 분석 랭킹 스타일 */
     .rank-row {
         display: flex;
         align-items: center;
@@ -595,19 +595,18 @@ with tab2:
 # =========================================================
 with tab3:
     st.header("🤖 AI 전략가 (Beta)")
-    st.caption("판다 길드전 데이터를 학습한 AI에게 질문해보세요! (Google Gemini 연동 필요)")
 
     if not HAS_GENAI:
         st.error("⚠️ `google-generativeai` 라이브러리가 설치되지 않았습니다. 관리자에게 문의하세요.")
         st.stop()
     
+    # [수정] 사용자 API KEY 설정 (UI 숨김 처리됨)
     USER_API_KEY = "AIzaSyCVW8xwrXj3QXEMfKRlniDKHWKniPth0I0"
-
-    with st.expander("⚙️ 설정: Gemini API Key", expanded=False):
-        api_key = st.text_input("API Key", value=USER_API_KEY, type="password")
-        if api_key:
-            os.environ["GOOGLE_API_KEY"] = api_key
-            genai.configure(api_key=api_key)
+    
+    # 내부적으로 키 설정
+    if USER_API_KEY:
+        os.environ["GOOGLE_API_KEY"] = USER_API_KEY
+        genai.configure(api_key=USER_API_KEY)
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -621,14 +620,15 @@ with tab3:
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        if not api_key:
-             response = "🔒 **API Key가 필요합니다.** 설정 메뉴에서 Google Gemini API Key를 입력해주세요."
+        # AI 응답 생성
+        if not USER_API_KEY:
+             response = "🔒 **API Key가 설정되지 않았습니다.** 관리자에게 문의하세요."
         else:
             try:
                 data_context = get_ai_context(df, MATCHUP_DB)
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 full_prompt = f"""
-                너는 '세븐나이츠 키우기' 게임의 길드전 전략 전문가야.
+                너는 '세븐나이츠 리버스' 게임의 길드전 전략 전문가야.
                 아래에 제공된 [길드전 데이터]를 바탕으로 사용자의 질문에 답변해줘.
                 데이터에 명확한 답이 없다면, 일반적인 게임 지식을 활용하되 "데이터에는 없지만..." 이라고 언급해줘.
                 답변은 친절하고 간결하게, 핵심 위주로 해줘.
