@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+from collections import Counter
 
 # ---------------------------------------------------------
 # 페이지 설정
@@ -142,6 +143,32 @@ st.markdown("""
     .notice-content li {
         margin-bottom: 4px;
     }
+
+    /* 메타 분석 랭킹 스타일 */
+    .rank-row {
+        display: flex;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .rank-num {
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: #3b82f6;
+        width: 30px;
+    }
+    .rank-name {
+        flex: 1;
+        font-weight: 600;
+        color: #1e293b;
+    }
+    .rank-value {
+        font-size: 0.9rem;
+        color: #64748b;
+        background-color: #f8fafc;
+        padding: 2px 8px;
+        border-radius: 12px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -159,6 +186,7 @@ def normalize_team_str(team_str):
     return ", ".join(parts)
 
 # [데이터 전처리] MATCHUP_DB 키 정규화
+# 사용자가 "오공 겔리두스"라고 입력했어도 "겔리두스, 오공"으로 변환하여 매칭 확률을 높입니다.
 if MATCHUP_DB:
     NORMALIZED_DB = {}
     for enemy, my_decks in MATCHUP_DB.items():
@@ -380,7 +408,8 @@ if df is None:
     st.stop()
 
 # --- 탭 구성 ---
-tab1, tab2, tab3 = st.tabs(["⚔️ 공격 덱 추천", "📖 매치업 상세 가이드", "📢 안내 및 소식"])
+# [수정] 메타 분석 탭 추가
+tab1, tab2, tab3, tab4 = st.tabs(["⚔️ 공격 덱 추천", "📖 매치업 상세 가이드", "📊 메타 분석", "📢 안내 및 소식"])
 
 # =========================================================
 # TAB 1: 공격 추천
@@ -388,20 +417,16 @@ tab1, tab2, tab3 = st.tabs(["⚔️ 공격 덱 추천", "📖 매치업 상세 �
 with tab1:
     with st.sidebar:
         st.header("🔍 필터 옵션")
-        
-        # [수정] 공격/방어/전체 보기 필터 (설명 추가)
         view_type = st.radio("데이터 기준", ["전체", "공격 (우리가 공격)", "방어 (상대가 공격)"], horizontal=True)
         st.divider()
-        
         search_query = st.text_input("상대 캐릭터 검색", placeholder="예: 카구라, 오공")
         st.caption("공백으로 구분하여 여러 명 검색 가능")
         st.divider()
 
         unique_dates = sorted(df['날짜'].unique().tolist(), reverse=True)
         if 'selected_date_list' not in st.session_state:
-            # [수정] 기본값을 전체 날짜로 변경
             st.session_state['selected_date_list'] = unique_dates 
-
+        
         col1, col2 = st.columns(2)
         if col1.button("모두 선택"):
             st.session_state['selected_date_list'] = unique_dates
@@ -409,83 +434,59 @@ with tab1:
         if col2.button("최근 5번"):
             st.session_state['selected_date_list'] = unique_dates[:5] if len(unique_dates) >= 5 else unique_dates
             st.rerun()
-        
         selected_dates = st.multiselect("📅 날짜 선택", unique_dates, key='selected_date_list')
         st.divider()
 
         unique_guilds = sorted([g for g in df['상대 길드'].unique().tolist() if g])
         selected_guilds = st.multiselect("🏰 상대 길드 선택", unique_guilds)
-        
         st.divider()
 
-        # [NEW] 영웅 제외 필터 (Tab 1 Sidebar)
         all_atk_heroes = set()
         if not df.empty:
-            # 공격팀 데이터에서 영웅 추출
             for team in df['공격팀_정렬'].dropna():
                 heroes = [h.strip() for h in team.split(',')]
                 all_atk_heroes.update(heroes)
         unique_heroes = sorted(list(all_atk_heroes))
-        
         excluded_heroes = st.multiselect("🚫 사용한 영웅 제외", unique_heroes, placeholder="이미 사용한 영웅을 선택하세요")
-        if excluded_heroes:
-            st.caption(f"선택한 영웅({len(excluded_heroes)}명)이 포함된 공격 덱은 제외됩니다.")
+        if excluded_heroes: st.caption(f"선택한 영웅({len(excluded_heroes)}명)이 포함된 공격 덱은 제외됩니다.")
 
     filtered_df = df.copy()
-    
-    # [수정] 데이터 기준 필터링 (라디오 버튼 값에 따라 처리)
-    if "공격" in view_type and view_type != "전체":
-        filtered_df = filtered_df[filtered_df['기준'] == '공격']
-    elif "방어" in view_type and view_type != "전체":
-        filtered_df = filtered_df[filtered_df['기준'] == '방어']
+    if "공격" in view_type and view_type != "전체": filtered_df = filtered_df[filtered_df['기준'] == '공격']
+    elif "방어" in view_type and view_type != "전체": filtered_df = filtered_df[filtered_df['기준'] == '방어']
         
     if search_query:
         query_terms = [k.strip() for k in search_query.replace(',', ' ').split() if k.strip()]
         if query_terms:
             mask = filtered_df['방어팀_정렬'].apply(lambda x: check_match(x, query_terms))
             filtered_df = filtered_df[mask]
-    if selected_dates:
-        filtered_df = filtered_df[filtered_df['날짜'].isin(selected_dates)]
-    if selected_guilds:
-        filtered_df = filtered_df[filtered_df['상대 길드'].isin(selected_guilds)]
+    if selected_dates: filtered_df = filtered_df[filtered_df['날짜'].isin(selected_dates)]
+    if selected_guilds: filtered_df = filtered_df[filtered_df['상대 길드'].isin(selected_guilds)]
     
-    # [NEW] 영웅 제외 필터 적용
     if excluded_heroes:
-        # 공격팀에 제외 영웅이 하나라도 포함되어 있으면 False 반환 (제외)
-        def is_available(team_str, excluded_set):
-            team_members = set([h.strip() for h in team_str.split(',')])
-            return team_members.isdisjoint(excluded_set)
-            
         excluded_set = set(excluded_heroes)
-        mask = filtered_df['공격팀_정렬'].apply(lambda x: is_available(x, excluded_set))
+        mask = filtered_df['공격팀_정렬'].apply(lambda x: set([h.strip() for h in x.split(',')]).isdisjoint(excluded_set))
         filtered_df = filtered_df[mask]
 
-    if filtered_df.empty:
-        st.info("검색 결과가 없습니다.")
+    if filtered_df.empty: st.info("검색 결과가 없습니다.")
     else:
         grouped = filtered_df.groupby('방어팀_정렬')
         display_list = []
-        for defense, group in grouped:
-            display_list.append({'defense': defense, 'count': len(group), 'data': group})
+        for defense, group in grouped: display_list.append({'defense': defense, 'count': len(group), 'data': group})
         display_list.sort(key=lambda x: x['count'], reverse=True)
 
         for item in display_list:
             defense_team = item['defense']
             match_count = item['count']
             group_data = item['data']
-            
             atk_counts = group_data['공격팀_정렬'].value_counts()
             if atk_counts.empty: continue
-            
             best_atk_team = atk_counts.idxmax()
             best_atk_count = atk_counts.max()
             pick_rate = (best_atk_count / match_count) * 100
-            
             best_atk_data = group_data[group_data['공격팀_정렬'] == best_atk_team]
             best_pet, best_pet_count = get_mode(best_atk_data['공격팀 펫'])
             best_skill, best_skill_count = get_mode(best_atk_data['공격팀 스순'])
             speed_dist = get_speed_distribution(best_atk_data['속공'])
-            
             def_tags = format_hero_tags(defense_team)
             atk_tags = format_hero_tags(best_atk_team)
             badge_style, badge_text = get_badge_style(match_count, pick_rate)
@@ -503,9 +504,7 @@ with tab1:
                             <div class="pick-rate-text">{pick_rate:.1f}% 픽률</div>
                         </div>
                         <div class="value">{atk_tags}</div>
-                        <div class="progress-container">
-                            <div class="progress-bg"><div class="progress-fill" style="width: {pick_rate}%; background-color: {bar_color};"></div></div>
-                        </div>
+                        <div class="progress-container"><div class="progress-bg"><div class="progress-fill" style="width: {pick_rate}%; background-color: {bar_color};"></div></div></div>
                     </div>
                     <div class="grid-2">
                         <div><div class="label">🐶 펫 <span style='font-weight:400; font-size:0.75em'>({best_pet_count}회)</span></div><div class="value">{best_pet}</div></div>
@@ -518,47 +517,31 @@ with tab1:
                 </div>
             """
             st.markdown(clean_html(raw_html), unsafe_allow_html=True)
-
             st.markdown("<div style='margin-bottom:5px; font-size:0.85rem; color:#6b7280;'>🔻 공격팀별 상세 기록</div>", unsafe_allow_html=True)
+            
             atk_groups = [ (k, v) for k, v in group_data.groupby('공격팀_정렬') ]
             atk_groups.sort(key=lambda x: len(x[1]), reverse=True)
 
             for atk_team, atk_df in atk_groups:
                 cnt = len(atk_df); ratio = (cnt / match_count) * 100
-                
-                # [수정] 팝업 트리거 확인 (정규화된 키 사용)
                 guide_available = False
                 matched_guide = None
                 matched_enemy_key = ""
-                
-                # 엑셀 데이터의 방덱 이름(defense_team)과 공덱 이름(atk_team)은 이미 정규화되어 있음 (load_data에서 처리)
-                # MATCHUP_DB의 키들도 앱 시작 시 정규화되어 있음
-                
-                # 1. 방어덱 매칭 시도
                 if defense_team in MATCHUP_DB:
-                    # 2. 공격덱 매칭 시도
                     if atk_team in MATCHUP_DB[defense_team]:
                         guide_available = True
                         matched_guide = MATCHUP_DB[defense_team][atk_team]
                         matched_enemy_key = defense_team
-                
-                # [수정] Expander 제목에 가이드 버튼 추가 여부 표시 (박스 및 볼드 처리)
-                # Streamlit Expander 제목은 CSS 정렬을 지원하지 않으므로, 공백(\u00A0)을 사용하여 시각적으로 분리
                 expander_title = f"⚔️ {atk_team} ({cnt}회 / {ratio:.1f}%)"
-                if guide_available:
-                    # 공백 4개로 조정
-                    expander_title += "\u00A0" * 4 + ":violet-background[**📖 공략 있음**]"
+                if guide_available: expander_title += "\u00A0" * 4 + ":violet-background[**📖 공략 있음**]"
 
                 with st.expander(expander_title):
                     if guide_available:
-                        # [추가] 팝업 버튼 (키는 반드시 고유해야 함)
                         if st.button("📖 세팅 디테일 보기", key=f"btn_{defense_team}_{atk_team}"):
                             show_guide_popup(matched_enemy_key, atk_team, matched_guide)
-
                     sub_pet, sub_pet_cnt = get_mode(atk_df['공격팀 펫'])
                     sub_skill, sub_skill_cnt = get_mode(atk_df['공격팀 스순'])
                     sub_speed_dist = get_speed_distribution(atk_df['속공'])
-                    
                     st.markdown(f"""
                         <div style="background-color: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #e5e7eb;">
                             <div style="font-size: 0.85rem; font-weight: 600; color: #4b5563; margin-bottom: 8px;">💡 이 조합의 추천 세팅</div>
@@ -569,7 +552,6 @@ with tab1:
                             </div>
                         </div>
                     """, unsafe_allow_html=True)
-
                     detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '속공', '방어팀 펫', '방어팀 스순']).size().reset_index(name='빈도')
                     detail_counts = detail_counts.sort_values('빈도', ascending=False)
                     detail_counts.columns = ['공격 펫', '공격 스순', '속공', '상대 펫', '상대 스순', '빈도']
@@ -582,10 +564,8 @@ with tab1:
 with tab2:
     st.header("📖 매치업 상세 가이드")
     st.caption("특정 방덱을 상대로 어떤 공덱을 어떻게 써야 하는지 확인하세요.")
-    
     search_query_guide = st.text_input("🛡️ 상대 방덱 검색", placeholder="예: 카구라, 오공 (비워두면 전체 보기)")
     
-    # [수정] 정규화된 DB의 키를 사용하여 필터링
     all_enemies = list(MATCHUP_DB.keys())
     target_enemies = []
     
@@ -600,11 +580,8 @@ with tab2:
         st.info("검색 결과가 없습니다.")
     else:
         for enemy_name in target_enemies:
-            # [수정] 방어덱 별로 Expander 그룹화, 기본은 접힘(expanded=False)으로 변경
             with st.expander(f"🛡️ VS {enemy_name}", expanded=False):
                 my_decks_map = MATCHUP_DB[enemy_name]
-                
-                # 공격덱이 여러 개일 경우 탭으로 분리, 하나면 바로 표시
                 if len(my_decks_map) > 1:
                     tabs = st.tabs([f"⚔️ {name}" for name in my_decks_map.keys()])
                     for i, (my_deck_name, guide) in enumerate(my_decks_map.items()):
@@ -616,36 +593,85 @@ with tab2:
                     guide = my_decks_map[my_deck_name]
                     html_content = generate_guide_html(enemy_name, my_deck_name, guide)
                     st.markdown(clean_html(html_content), unsafe_allow_html=True)
-            
             st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
 
 # =========================================================
-# TAB 3: 안내 및 소식 (Notice) - [수정됨]
+# TAB 3: 메타 분석 [NEW]
 # =========================================================
 with tab3:
-    # 헤더 삭제 (이전 st.header("📢 안내 센터") 제거됨)
+    st.header("📊 길드전 메타 분석")
+    st.caption(f"현재 데이터({len(df)}건)를 기반으로 한 트렌드 분석입니다.")
     
-    # [수정] 탭 분리: 사이트 사용법 / 공지사항
+    if df.empty:
+        st.info("데이터가 충분하지 않습니다.")
+    else:
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("🛡️ 많이 보이는 방어 덱 TOP 5")
+            def_counts = df['방어팀_정렬'].value_counts().head(5)
+            for i, (name, count) in enumerate(def_counts.items()):
+                st.markdown(f"""
+                <div class="rank-row">
+                    <div class="rank-num">{i+1}</div>
+                    <div class="rank-name">{format_hero_tags(name)}</div>
+                    <div class="rank-value">{count}회 등장</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+        with col2:
+            st.subheader("⚔️ 많이 쓰이는 공격 덱 TOP 5")
+            atk_counts = df['공격팀_정렬'].value_counts().head(5)
+            for i, (name, count) in enumerate(atk_counts.items()):
+                st.markdown(f"""
+                <div class="rank-row">
+                    <div class="rank-num">{i+1}</div>
+                    <div class="rank-name">{format_hero_tags(name)}</div>
+                    <div class="rank-value">{count}회 사용</div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+        st.subheader("👑 영웅 픽률 순위 (공격/방어 통합)")
+        all_heroes = []
+        for team in pd.concat([df['방어팀_정렬'], df['공격팀_정렬']]):
+            if pd.isna(team): continue
+            all_heroes.extend([h.strip() for h in team.split(',')])
+        
+        hero_counts = pd.Series(all_heroes).value_counts().head(10)
+        st.bar_chart(hero_counts, color="#3b82f6")
+        
+        st.subheader("✨ 범용성 좋은 공격 덱 TOP 5")
+        st.caption("하나의 공격 덱으로 얼마나 다양한 방덱을 상대했는지 보여줍니다.")
+        
+        versatility = df.groupby('공격팀_정렬')['방어팀_정렬'].nunique().sort_values(ascending=False).head(5)
+        for i, (name, count) in enumerate(versatility.items()):
+             st.markdown(f"""
+                <div class="rank-row">
+                    <div class="rank-num" style="color:#10b981;">{i+1}</div>
+                    <div class="rank-name">{format_hero_tags(name)}</div>
+                    <div class="rank-value" style="background-color:#ecfdf5; color:#047857;">{count}종류 방덱 상대</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+# =========================================================
+# TAB 4: 안내 및 소식
+# =========================================================
+with tab4:
     help_tab, notice_tab = st.tabs(["📘 사이트 사용법", "📢 공지사항"])
     
-    # 1. 사이트 사용법 탭
     with help_tab:
         st.markdown("#### 👋 환영합니다! 이렇게 사용해보세요.")
-        
-        # [추가됨] 사이트 소개 Expander
         with st.expander("🐼 **사이트 소개 및 활용 가이드**", expanded=True):
             st.markdown("""
             **판다 길드전**의 공격 성공 및 방어 실패 데이터를 분석하여 만든 **전적 통계 사이트**입니다.
-            
             **🎯 이럴 때 활용하세요!**
             - **공격 조합이 고민될 때**: 데이터로 검증된 고승률 공격 조합을 찾아보세요.
             - **영웅이 부족할 때**: "이 조합으로도 잡네?" 싶은 새로운 조커 덱을 발견할 수 있습니다.
-            
             > **⚠️ 주의사항** > 제공되는 정보는 통계 데이터입니다. 상대의 세부 스펙에 따라 결과가 다를 수 있으니, 익숙하지 않은 조합은 반드시 **연습 모드**를 활용해 보세요.
             """)
-
-        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=False):
-            # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
+        with st.expander("🔍 **원하는 상대 방덱을 찾고 싶어요**", expanded=True):
             st.markdown("""
             <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
                 <li>왼쪽 사이드바의 <b>'상대 캐릭터 검색'</b> 창에 캐릭터 이름을 입력하세요.</li>
@@ -653,9 +679,7 @@ with tab3:
                 <li>콤마(,)나 공백으로 구분하여 여러 명을 동시에 검색할 수도 있습니다.</li>
             </ul>
             """, unsafe_allow_html=True)
-            
         with st.expander("⚔️ **어떤 공격덱이 좋은지 모르겠어요**"):
-            # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
             st.markdown("""
             <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
                 <li><b>'공격 덱 추천' 탭</b>에서 데이터를 확인하세요.</li>
@@ -663,9 +687,7 @@ with tab3:
                 <li><b>'픽률'</b>이 높고 <b>'표본(데이터 수)'</b>이 많은 덱을 사용하는 것을 추천합니다.</li>
             </ul>
             """, unsafe_allow_html=True)
-            
         with st.expander("📖 **상세한 덱 세팅과 운영법이 궁금해요**"):
-            # [수정] 마크다운 들여쓰기 문제 해결을 위해 HTML 리스트로 변경
             st.markdown("""
             <ul style="padding-left: 20px; margin: 0; line-height: 1.6;">
                 <li><b>'매치업 상세 가이드' 탭</b>으로 이동해 보세요.</li>
@@ -691,13 +713,10 @@ with tab3:
             </div>
             """, unsafe_allow_html=True)
 
-    # 2. 공지사항 탭
     with notice_tab:
         st.caption("최신 업데이트 내역입니다.")
-        
         if NOTICE_DB:
             for notice in NOTICE_DB:
-                # [수정] 접고 펼치는 Expander 스타일로 변경하여 가독성 확보
                 with st.expander(f"📅 {notice['date']} 업데이트", expanded=True):
                     st.markdown(notice['content'], unsafe_allow_html=True)
         else:
@@ -709,4 +728,3 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
-
