@@ -702,7 +702,7 @@ with tab2:
 # =========================================================
 with tab3:
     st.header("🤖 AI 전략가 (Beta)")
-    st.caption("판다 길드전 데이터를 학습한 AI에게 질문해보세요! (Google Gemini 연동 필요)")
+    st.caption("판다 길드전 데이터를 학습한 AI에게 질문해보세요!")
 
     if not HAS_GENAI:
         st.error("⚠️ `google-generativeai` 라이브러리가 설치되지 않았습니다. 관리자에게 문의하세요.")
@@ -721,7 +721,7 @@ with tab3:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    if prompt := st.chat_input("질문을 입력하세요..."):
+    if prompt := st.chat_input("질문을 입력하세요...(예: 프레이야 사용해서 오공 겔리두스 에이스 덱 잡을 수 있어?)"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -828,3 +828,4 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
