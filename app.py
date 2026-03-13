@@ -708,7 +708,13 @@ with tab3:
         st.error("⚠️ `google-generativeai` 라이브러리가 설치되지 않았습니다. 관리자에게 문의하세요.")
         st.stop()
     
-    USER_API_KEY = "AIzaSyCVW8xwrXj3QXEMfKRlniDKHWKniPth0I0"
+    # [수정됨] st.secrets를 사용하여 안전하게 API 키 불러오기
+    try:
+        USER_API_KEY = st.secrets["GOOGLE_API_KEY"]
+    except KeyError:
+        USER_API_KEY = None
+    except Exception as e:
+        USER_API_KEY = None
     
     if USER_API_KEY:
         os.environ["GOOGLE_API_KEY"] = USER_API_KEY
@@ -727,12 +733,13 @@ with tab3:
             st.markdown(prompt)
 
         if not USER_API_KEY:
-             response = "🔒 **API Key가 설정되지 않았습니다.** 관리자에게 문의하세요."
+             response = "🔒 **API Key가 설정되지 않았습니다.** `.streamlit/secrets.toml` 파일을 확인해주세요."
         else:
             try:
                 # 데이터 분석 및 요약 생성 (업그레이드된 로직 호출)
                 data_context = get_ai_context(df, MATCHUP_DB, user_query=prompt)
                 
+                # [수정됨] 404 에러 방지를 위해 실제 지원되는 모델 리스트로 변경
                 candidate_models = ['gemini-3.1-pro-preview']
                 
                 response_text = ""
@@ -768,7 +775,7 @@ with tab3:
                 if response_text:
                     response = response_text
                 else:
-                    response = f"🚫 모든 AI 모델 연결 실패. (Last Error: {error_msg})"
+                    response = f"🚫 모든 AI 모델 연결 실패. 최신 패키지(`pip install --upgrade google-generativeai`) 설치가 필요합니다. (에러 원인: {error_msg})"
 
             except Exception as e:
                 response = f"🚫 오류가 발생했습니다: {str(e)}"
@@ -824,7 +831,3 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
-
-
-
-
