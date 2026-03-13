@@ -425,7 +425,7 @@ def get_ai_context(df, matchup_db, user_query=""):
     # 0점 이상인 관련 데이터 추출 및 정렬 (최대 50건까지만 컨텍스트에 포함)
     relevant_df = temp_df[temp_df['score'] > 0].sort_values(by='score', ascending=False)
     
-    # 4. 컨텍스트 텍스트 생성
+    # 4. 컨텍스트 텍스트 생성 [수정된 부분: 방어팀 스순, 펫 정보 포함]
     if not relevant_df.empty:
         analyzed_df = relevant_df.head(50)
         context += f"🎯 [질문과 직접 관련된 핵심 데이터 {len(analyzed_df)}건 추출됨]\n"
@@ -438,8 +438,12 @@ def get_ai_context(df, matchup_db, user_query=""):
                     context += f"🏰 [상대 길드 '{g}'의 주요 방어덱 및 카운터 정보]\n"
                     top_defs = g_df['방어팀_정렬'].value_counts().head(3)
                     for d_name, d_cnt in top_defs.items():
-                        context += f"  - 방어덱: [{d_name}] ({d_cnt}회 등장)\n"
                         sub_df = g_df[g_df['방어팀_정렬'] == d_name]
+                        def_pet, _ = get_mode(sub_df['방어팀 펫'])
+                        def_skill, _ = get_mode(sub_df['방어팀 스순'])
+                        
+                        context += f"  - 방어덱: [{d_name}] (방어 펫: {def_pet}, 방어 스순: {def_skill} / {d_cnt}회 등장)\n"
+                        
                         top_atks = sub_df['공격팀_정렬'].value_counts().head(2)
                         for a_name, a_cnt in top_atks.items():
                             context += f"    > 카운터 공덱: [{a_name}] ({a_cnt}회 승리)\n"
@@ -450,15 +454,20 @@ def get_ai_context(df, matchup_db, user_query=""):
             patterns = analyzed_df.groupby(['방어팀_정렬', '공격팀_정렬']).size().reset_index(name='count')
             patterns = patterns.sort_values('count', ascending=False).head(10)
             
-            context += "⚔️ [가장 많이 사용된 승리 매치업]\n"
+            context += "⚔️ [가장 많이 사용된 승리 매치업 상세 정보]\n"
             for _, row in patterns.iterrows():
                 context += f"- 상대 방어팀: [{row['방어팀_정렬']}]  VS  우리 공격팀: [{row['공격팀_정렬']}] (총 {row['count']}회 승리)\n"
                 
-                # 상세 세팅
+                # 상세 세팅 추출 (방어팀, 공격팀 모두 포함)
                 subset = analyzed_df[(analyzed_df['방어팀_정렬'] == row['방어팀_정렬']) & (analyzed_df['공격팀_정렬'] == row['공격팀_정렬'])]
-                pet, _ = get_mode(subset['공격팀 펫'])
-                skill, _ = get_mode(subset['공격팀 스순'])
-                context += f"    > 당시 세팅: 펫[{pet}], 스킬순서[{skill}]\n"
+                def_pet, _ = get_mode(subset['방어팀 펫'])
+                def_skill, _ = get_mode(subset['방어팀 스순'])
+                atk_pet, _ = get_mode(subset['공격팀 펫'])
+                atk_skill, _ = get_mode(subset['공격팀 스순'])
+                speed, _ = get_mode(subset['속공'])
+                
+                context += f"    > 🛡️ [방어팀 세팅] 펫: {def_pet}, 스킬순서: {def_skill}\n"
+                context += f"    > ⚔️ [공격팀 세팅] 펫: {atk_pet}, 스킬순서: {atk_skill}, 속공: {speed}\n"
     else:
         context += "⚠️ 질문하신 내용(길드, 영웅, 특정 날짜 등)에 정확히 일치하는 기록을 엑셀 데이터에서 찾지 못했습니다.\n"
         top_atk = df['공격팀_정렬'].value_counts().head(5)
@@ -659,7 +668,7 @@ with tab1:
                     """, unsafe_allow_html=True)
                     detail_counts = atk_df.groupby(['공격팀 펫', '공격팀 스순', '속공', '방어팀 펫', '방어팀 스순']).size().reset_index(name='빈도')
                     detail_counts = detail_counts.sort_values('빈도', ascending=False)
-                    detail_counts.columns = ['공격 펫', '공격 스순', '속공', '상대 펫', '상대 스순', '빈도']
+                    detail_counts.columns = ['공격 펫', '공격 스순', '속공', '방어 펫', '방어 스순', '빈도']
                     st.dataframe(detail_counts, use_container_width=True, hide_index=True, column_config={"빈도": st.column_config.NumberColumn(format="%d회")})
             st.markdown("<div style='margin-bottom: 30px;'></div>", unsafe_allow_html=True)
 
@@ -708,7 +717,7 @@ with tab3:
         st.error("⚠️ `google-generativeai` 라이브러리가 설치되지 않았습니다. 관리자에게 문의하세요.")
         st.stop()
     
-    # [수정됨] st.secrets를 사용하여 안전하게 API 키 불러오기
+    # st.secrets를 사용하여 안전하게 API 키 불러오기
     try:
         USER_API_KEY = st.secrets["GOOGLE_API_KEY"]
     except KeyError:
@@ -727,7 +736,7 @@ with tab3:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    if prompt := st.chat_input("질문을 입력하세요.. (예: 프레이야 사용해서 오공 겔리두스 에이스 덱 잡을 수 있어?)"):
+    if prompt := st.chat_input("질문을 입력하세요.. (예: 프레이야 방덱의 스킬 순서는 어떻게 돼?)"):
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -739,7 +748,7 @@ with tab3:
                 # 데이터 분석 및 요약 생성 (업그레이드된 로직 호출)
                 data_context = get_ai_context(df, MATCHUP_DB, user_query=prompt)
                 
-                # [수정됨] 404 에러 방지를 위해 실제 지원되는 모델 리스트로 변경
+                # 지원되는 모델 리스트
                 candidate_models = ['gemini-3.1-pro-preview']
                 
                 response_text = ""
@@ -750,14 +759,13 @@ with tab3:
                         model = genai.GenerativeModel(model_name)
                         full_prompt = f"""
                         너는 '세븐나이츠 리버스' 게임의 길드전 전략 전문가야.
-                        아래 제공된 [길드전 데이터]를 바탕으로 사용자의 질문에 답변해줘.
+                        아래 제공된 [길드전 데이터]를 바탕으로 사용자의 질문에 완벽히 답변해줘.
                         
                         [답변 원칙]
-                        1. **분석된 데이터** (길드 정보, 방어팀/공격팀 매칭 횟수 등)를 최우선 근거로 제시해줘.
-                        2. 사용자가 특정 길드(예: 밤빛)를 물어봤다면, 해당 길드의 데이터 요약을 바탕으로 자주 나오는 방덱과 그 카운터 공덱을 분석해줘.
-                        3. 사용자가 특정 매치업(A 상대로 B 덱 어때?)을 물어봤다면, 해당 매치업의 승리 횟수나 세팅을 구체적으로 알려줘.
-                        4. 데이터가 없다면 "데이터에는 해당 기록이 없습니다"라고 솔직히 말하고, 일반적인 상성 지식을 활용해 조언해줘.
-                        5. 답변은 친절하고 간결하게, 가독성 좋게 정리해줘.
+                        1. **분석된 데이터** (방어팀 세팅, 공격팀 세팅 등)를 최우선 근거로 제시해.
+                        2. 사용자가 '방어팀의 스킬 순서'나 '방어덱 세팅'을 물어봤다면 제공된 데이터의 [방어팀 세팅] 값을 기반으로 구체적으로 답변해줘. (이제 데이터에 방어팀 스순 정보가 포함되어 있어!)
+                        3. 사용자가 특정 매치업을 물어봤다면, 방어팀과 공격팀의 펫, 스순, 속공 등을 종합적으로 비교해서 알려줘.
+                        4. 답변은 친절하고 간결하게, 가독성 좋게 마크다운으로 정리해줘.
 
                         [길드전 데이터]
                         {data_context}
