@@ -733,11 +733,7 @@ with tab3:
                 # 데이터 분석 및 요약 생성 (업그레이드된 로직 호출)
                 data_context = get_ai_context(df, MATCHUP_DB, user_query=prompt)
                 
-                candidate_models = [
-                    'gemini-3.1-pro-preview', 
-                    'gemini-2.0-flash',
-                    'gemini-1.5-flash'
-                ]
+                candidate_models = ['gemini-3.1-pro-preview']
                 
                 response_text = ""
                 error_msg = ""
@@ -828,6 +824,7 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
 
 
 
