@@ -734,7 +734,7 @@ with tab3:
                 data_context = get_ai_context(df, MATCHUP_DB, user_query=prompt)
                 
                 candidate_models = [
-                    'gemini-3-flash-preview', 
+                    'gemini-3.1-pro-preview', 
                     'gemini-2.0-flash',
                     'gemini-1.5-flash'
                 ]
@@ -828,5 +828,6 @@ st.markdown("""
         데이터 출처: 판다 길드전 내용 | 문의: 콩쌍
     </div>
 """, unsafe_allow_html=True)
+
 
 
